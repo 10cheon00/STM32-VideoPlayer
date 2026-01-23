@@ -1,0 +1,10 @@
+build
+mx.scratch
+!.settings
+
+
+# Custom ignore rules
+.DS_Store
+.vscode/
+Adafruit_ST7735_and_ST7789_Library-1.11.0/
+Drivers/
