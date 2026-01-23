@@ -21,6 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "st7789.h"
 
 /* USER CODE END Includes */
 
@@ -44,7 +45,7 @@ SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 
 /* USER CODE BEGIN PV */
-
+ST7789_HandleTypeDef hst7789;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -93,6 +94,20 @@ int main(void)
   MX_SPI1_Init();
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
+  
+  hst7789.SCL_GPIO_Port = GPIOA;
+  hst7789.SDA_GPIO_Port = GPIOA;
+  hst7789.RST_GPIO_Port = LCD_RST_GPIO_Port;
+  hst7789.DC_GPIO_Port = LCD_DC_GPIO_Port;
+  hst7789.CS_GPIO_Port = LCD_CS_GPIO_Port;
+  hst7789.SCL_Pin = GPIO_PIN_5;
+  hst7789.SDA_Pin = GPIO_PIN_7;
+  hst7789.RST_Pin = LCD_RST_Pin;
+  hst7789.DC_Pin = LCD_DC_Pin;
+  hst7789.CS_Pin = LCD_CS_Pin;
+  ST7789_Init(&hst7789);
+
+  ST7789_PrintCharacter();
 
   /* USER CODE END 2 */
 
