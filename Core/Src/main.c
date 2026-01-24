@@ -105,9 +105,10 @@ int main(void)
   hst7789.RST_Pin = LCD_RST_Pin;
   hst7789.DC_Pin = LCD_DC_Pin;
   hst7789.CS_Pin = LCD_CS_Pin;
+  hst7789.hspi = &hspi1;
   ST7789_Init(&hst7789);
 
-  ST7789_PrintCharacter();
+  ST7789_PrintImage();  
 
   /* USER CODE END 2 */
 
