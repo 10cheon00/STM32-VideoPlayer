@@ -14,7 +14,7 @@
 #define ST7789_CASET 0x2A   // 열 주소값 설정
 #define ST7789_RASET 0x2B   // 행 주소값 설정
 #define ST7789_INVON 0x21   // 디스플레이 인버전 모드 설정
-#define ST7789_NORON 0x12   // 일반 디스플레이 모드 설정
+#define ST7789_NORON 0x13   // 일반 디스플레이 모드 설정
 #define ST7789_DISPON 0x29  // 디스플레이 켜기? TODO: 반대되는 DISPOFF 명령어로 꺼지는지 확인해볼까?
 #define ST7789_RAMWR 0x2C   // 이미지 픽셀 데이터 전송
 
@@ -74,7 +74,7 @@ static const uint8_t PROGMEM
       10 };                         //    10 ms delay
 */
 
-typedef struct ST7789_HandleTypeDef {
+typedef struct {
     SPI_HandleTypeDef* hspi;
     GPIO_TypeDef *SCL_GPIO_Port;
     GPIO_TypeDef *SDA_GPIO_Port;
@@ -88,7 +88,17 @@ typedef struct ST7789_HandleTypeDef {
     uint16_t CS_Pin;
 } ST7789_HandleTypeDef;
 
+/* 
+ */
+typedef struct ST7789_Image {
+    uint16_t width;
+    uint16_t height;
+    uint16_t x;
+    uint16_t y;
+    void *rawData; // TODO: 영상에서 얻게되는 이미지 타입에 따라 이 변수의 타입을 수정해야함
+} ST7789_Image;
+
 void ST7789_Init(ST7789_HandleTypeDef* hst7789);
-void ST7789_PrintImage();
+void ST7789_PrintImage(ST7789_Image *image);
 
 #endif /* ST7789_H */
