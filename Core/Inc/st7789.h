@@ -95,7 +95,7 @@ typedef struct ST7789_Image {
     uint16_t height;
     uint16_t x;
     uint16_t y;
-    void *rawData; // TODO: 영상에서 얻게되는 이미지 타입에 따라 이 변수의 타입을 수정해야함
+    uint8_t *rawData; // TODO: 영상에서 얻게되는 이미지 타입에 따라 이 변수의 타입을 수정해야함
 } ST7789_Image;
 
 void ST7789_Init(ST7789_HandleTypeDef* hst7789);

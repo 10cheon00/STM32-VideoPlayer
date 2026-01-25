@@ -223,9 +223,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    ST7789_PrintImage(&image);
-    image.x = (image.x + 10) % 240;
-    image.y = (image.y + 20) % 240;
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
