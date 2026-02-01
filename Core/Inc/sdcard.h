@@ -16,6 +16,8 @@ typedef struct {
     uint16_t CS_Pin;
 } SDCard_HandleTypeDef;
 
+void SD_Init(SDCard_HandleTypeDef* __hsdcard);
+
 typedef enum {
     SD_CMD0   = (0x40 + 0),
     SD_CMD1   = (0x40 + 1),
@@ -62,7 +64,9 @@ typedef enum {
     SD_TYPE_MMC_V3
 } SD_Version_Type;
 
-DSTATUS SD_Initialize(SDCard_HandleTypeDef* __hsdcard, BYTE pdrv);
+/* user_diskio.c에서 호출되는 함수들 */
+
+DSTATUS SD_Initialize(BYTE pdrv);
 
 DSTATUS SD_Status(BYTE pdrv);
 
@@ -77,6 +81,8 @@ DSTATUS SD_Write(BYTE pdrv, /* Physical drive nmuber to identify the drive */
                  const BYTE *buff,   /* Data to be written */
                  DWORD       sector, /* Sector address in LBA */
                  UINT        count);
+
+/**********************************/
 
 SD_Version_Type SD_GetVersion();
 

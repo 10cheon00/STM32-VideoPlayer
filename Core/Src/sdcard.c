@@ -24,12 +24,15 @@ static SDCard_HandleTypeDef* hsdcard;
  * https://elm-chan.org/docs/mmc/mmc_e.html#spiinit
  * https://onlinedocs.microchip.com/oxy/GUID-F9FE1ABC-D4DD-4988-87CE-2AFD74DEA334-en-US-3/GUID-48879CB2-9C60-4279-8B98-E17C499B12AF.html
  */
-DSTATUS SD_Initialize(SDCard_HandleTypeDef* __hsdcard, BYTE pdrv) {
+
+void SD_Init(SDCard_HandleTypeDef* __hsdcard) {
+    hsdcard = __hsdcard;
+}
+
+DSTATUS SD_Initialize(BYTE pdrv) {
     SD_Response    res;
     SD_Information info;
 
-    hsdcard = __hsdcard;
-    
     HAL_Delay(1);
     /**
      * 100khz ~ 400khz로 클럭 낮추기
@@ -211,11 +214,11 @@ static bool SD_PowerOn() {
 }
 
 static void SD_Select() {
-    HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(hsdcard->CS_GPIO_Port, hsdcard->CS_Pin, GPIO_PIN_RESET);
 }
 
 static void SD_Deselect() {
-    HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(hsdcard->CS_GPIO_Port, hsdcard->CS_Pin, GPIO_PIN_SET);
 }
 
 SD_Response SD_Send_Command(SD_Command_Type cmd, DWORD arg) {
