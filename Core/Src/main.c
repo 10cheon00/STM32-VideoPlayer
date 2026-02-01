@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "fatfs.h"
+#include "libjpeg.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -194,6 +196,8 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   MX_SPI2_Init();
+  MX_FATFS_Init();
+  MX_LIBJPEG_Init();
   /* USER CODE BEGIN 2 */
   
   hst7789.SCL_GPIO_Port = GPIOA;
