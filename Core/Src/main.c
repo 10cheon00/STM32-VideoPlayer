@@ -23,8 +23,11 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "st7789.h"
+#include <stdio.h>
+
 #include "stm32f4xx_hal.h"
+#include "st7789.h"
+#include "sdcard.h"
 
 /* USER CODE END Includes */
 
@@ -50,6 +53,7 @@ SPI_HandleTypeDef hspi2;
 /* USER CODE BEGIN PV */
 ST7789_HandleTypeDef hst7789;
 ST7789_Image image;
+SDCard_HandleTypeDef hsdcard;
 
 const uint16_t packedRawImageLength = 1536;
 static uint8_t packedRawImage[1536] = {
@@ -195,9 +199,9 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_SPI1_Init();
-  MX_SPI2_Init();
   MX_FATFS_Init();
   MX_LIBJPEG_Init();
+  MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
   
   hst7789.SCL_GPIO_Port = GPIOA;
@@ -220,6 +224,39 @@ int main(void)
   image.height = 32;
   ST7789_PrintImage(&image);  
 
+  hsdcard.hspi = &hspi2;
+  hsdcard.CS_GPIO_Port = SD_CS_GPIO_Port;
+  hsdcard.CS_Pin = SD_CS_Pin;
+  SD_Init(&hsdcard);
+
+  FATFS fs;
+  FIL fil;
+  const TCHAR* path = "0:";
+  FRESULT fr = f_mount(&fs, path, 0);
+  if (fr != FR_OK) {
+    Error_Handler();
+  }
+  fr = f_open(&fil, "/output.avi", FA_READ);
+  if (fr != FR_OK) {
+    Error_Handler();
+  }
+  FILINFO fno;
+  fr = f_stat("output.avi", &fno);
+  if (fr != FR_OK) {
+    Error_Handler();
+  }
+
+  f_lseek(&fil, 0);
+  UINT br;
+  uint8_t buf[256];
+  fr = f_read(&fil, buf, 256, (UINT*)&br);
+  if (fr != FR_OK) {
+    Error_Handler();
+  }
+  fr = f_close(&fil);
+  if (fr != FR_OK) {
+    Error_Handler();
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -340,7 +377,7 @@ static void MX_SPI2_Init(void)
   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi2.Init.NSS = SPI_NSS_SOFT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -374,12 +411,22 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, LCD_RST_Pin|LCD_DC_Pin|LCD_CS_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(SD_CS_GPIO_Port, SD_CS_Pin, GPIO_PIN_RESET);
+
   /*Configure GPIO pins : LCD_RST_Pin LCD_DC_Pin LCD_CS_Pin */
   GPIO_InitStruct.Pin = LCD_RST_Pin|LCD_DC_Pin|LCD_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : SD_CS_Pin */
+  GPIO_InitStruct.Pin = SD_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(SD_CS_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 

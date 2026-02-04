@@ -13,7 +13,7 @@ static bool SD_BusyWait();
 
 static DSTATUS           status;
 static SD_Version_Type   sd_version;
-extern volatile uint32_t Timer1, Timer2;
+static volatile uint32_t Timer1, Timer2;
 
 static SDCard_HandleTypeDef* hsdcard;
 
@@ -33,15 +33,13 @@ DSTATUS SD_Initialize(BYTE pdrv) {
     SD_Response    res;
     SD_Information info;
 
-    HAL_Delay(1);
+    HAL_Delay(300);
     /**
      * 100khz ~ 400khz로 클럭 낮추기
      * -----------------------------------------------------------------------
      * To ensure the proper operation of the SD card, the SD CLK signal should
      * have a frequency in the range of 100 to 400 kHz.
      */
-    // hspi1.Init.BaudRatePrescaler =
-    //     SPI_BAUDRATEPRESCALER_256; /* 예: 24 MHz /256 ≈ 94 kHz */
     hsdcard->hspi->Init.BaudRatePrescaler =
         SPI_BAUDRATEPRESCALER_256; /* 예: 24 MHz /256 ≈ 94 kHz */
 
@@ -98,29 +96,7 @@ DSTATUS SD_Initialize(BYTE pdrv) {
             sd_version = SD_TYPE_UNKNOWN;
         }
     } else {
-        // todo: 가지고 있는 SD카드가 하나라 이 분기 하위 코드들을
-        //  테스트 해볼 수 없었음.
 
-        // CMD55 for Leading ACMD
-        // res = SD_Send_Command(CMD55, 0);
-        // if (res != SD_RESPONSE_IN_IDLE_STATE) {
-        //     return status = STA_NOINIT;
-        // }
-        // res = SD_Send_Command(ACMD41, 0);
-
-        // if (res & SD_RESPONSE_ILLEGAL_COMMAND) {
-        //     Timer1 = 1000;
-        //     do {
-        //         res = SD_Send_Command(CMD1, 0);
-        //     } while (Timer1 && res != SD_RESPONSE_IN_IDLE_STATE);
-        //     if (!Timer1) {
-        //         sd_version = SD_TYPE_UNKNOWN;
-        //     } else if (res == 0) {
-        //         sd_version = SD_TYPE_MMC_V3;
-        //     }
-        // } else {
-        //     sd_version = SD_TYPE_V1;
-        // }
     }
 
     /**

@@ -36,6 +36,7 @@
 #include <string.h>
 #include "ff_gen_drv.h"
 
+#include "sdcard.h"
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
@@ -81,8 +82,8 @@ DSTATUS USER_initialize (
 )
 {
   /* USER CODE BEGIN INIT */
-    Stat = STA_NOINIT;
-    return Stat;
+    // Stat = STA_NOINIT;
+    return SD_Initialize(pdrv);
   /* USER CODE END INIT */
 }
 
@@ -96,7 +97,7 @@ DSTATUS USER_status (
 )
 {
   /* USER CODE BEGIN STATUS */
-    Stat = STA_NOINIT;
+    Stat = SD_Status(pdrv);
     return Stat;
   /* USER CODE END STATUS */
 }
@@ -117,7 +118,7 @@ DRESULT USER_read (
 )
 {
   /* USER CODE BEGIN READ */
-    return RES_OK;
+    return SD_Read(pdrv, buff, sector, count);
   /* USER CODE END READ */
 }
 
@@ -139,7 +140,7 @@ DRESULT USER_write (
 {
   /* USER CODE BEGIN WRITE */
   /* USER CODE HERE */
-    return RES_OK;
+    return USER_write(pdrv, buff, sector, count);
   /* USER CODE END WRITE */
 }
 #endif /* _USE_WRITE == 1 */
@@ -159,8 +160,7 @@ DRESULT USER_ioctl (
 )
 {
   /* USER CODE BEGIN IOCTL */
-    DRESULT res = RES_ERROR;
-    return res;
+    return SD_ioctl(pdrv, cmd, buff);
   /* USER CODE END IOCTL */
 }
 #endif /* _USE_IOCTL == 1 */

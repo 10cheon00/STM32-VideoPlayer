@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "diskio.h"
-#include "ff.h"
+#include "stm32f4xx_hal.h"
 
 /**
  * https://elm-chan.org/docs/mmc/mmc_e.html
