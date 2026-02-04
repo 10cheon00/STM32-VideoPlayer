@@ -26,8 +26,8 @@
 #include <stdio.h>
 
 #include "stm32f4xx_hal.h"
-#include "st7789.h"
-#include "sdcard.h"
+#include "drv_st7789.h"
+#include "drv_sd_spi.h"
 
 /* USER CODE END Includes */
 
@@ -229,34 +229,34 @@ int main(void)
   hsdcard.CS_Pin = SD_CS_Pin;
   SD_Init(&hsdcard);
 
-  FATFS fs;
-  FIL fil;
-  const TCHAR* path = "0:";
-  FRESULT fr = f_mount(&fs, path, 0);
-  if (fr != FR_OK) {
-    Error_Handler();
-  }
-  fr = f_open(&fil, "/output.avi", FA_READ);
-  if (fr != FR_OK) {
-    Error_Handler();
-  }
-  FILINFO fno;
-  fr = f_stat("output.avi", &fno);
-  if (fr != FR_OK) {
-    Error_Handler();
-  }
+  // FATFS fs;
+  // FIL fil;
+  // const TCHAR* path = "0:";
+  // FRESULT fr = f_mount(&fs, path, 0);
+  // if (fr != FR_OK) {
+  //   Error_Handler();
+  // }
+  // fr = f_open(&fil, "/output.avi", FA_READ);
+  // if (fr != FR_OK) {
+  //   Error_Handler();
+  // }
+  // FILINFO fno;
+  // fr = f_stat("output.avi", &fno);
+  // if (fr != FR_OK) {
+  //   Error_Handler();
+  // }
 
-  f_lseek(&fil, 0);
-  UINT br;
-  uint8_t buf[256];
-  fr = f_read(&fil, buf, 256, (UINT*)&br);
-  if (fr != FR_OK) {
-    Error_Handler();
-  }
-  fr = f_close(&fil);
-  if (fr != FR_OK) {
-    Error_Handler();
-  }
+  // f_lseek(&fil, 0);
+  // UINT br;
+  // uint8_t buf[256];
+  // fr = f_read(&fil, buf, 256, (UINT*)&br);
+  // if (fr != FR_OK) {
+  //   Error_Handler();
+  // }
+  // fr = f_close(&fil);
+  // if (fr != FR_OK) {
+  //   Error_Handler();
+  // }
   /* USER CODE END 2 */
 
   /* Infinite loop */

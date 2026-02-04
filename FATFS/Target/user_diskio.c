@@ -36,7 +36,7 @@
 #include <string.h>
 #include "ff_gen_drv.h"
 
-#include "sdcard.h"
+#include "drv_sd_spi.h"
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 

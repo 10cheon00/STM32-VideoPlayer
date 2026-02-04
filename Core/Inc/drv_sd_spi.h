@@ -1,5 +1,5 @@
-#ifndef _SDCARD_H_
-#define _SDCARD_H_
+#ifndef _DRV_SD_SPI_H_
+#define _DRV_SD_SPI_H_
 
 #include <stdbool.h>
 
@@ -111,4 +111,4 @@ typedef uint8_t SD_DataResponse;
 
 
 
-#endif /* _SDCARD_H_ */
+#endif /* _DRV_SD_SPI_H_ */

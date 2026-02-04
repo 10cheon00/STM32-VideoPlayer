@@ -1,7 +1,4 @@
-#include "st7789.h"
-#include "stm32f4xx_hal_conf.h"
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_hal_spi.h"
+#include "drv_st7789.h"
 
 static ST7789_HandleTypeDef *hst7789;
 

@@ -1,5 +1,5 @@
-#ifndef ST7789_H
-#define ST7789_H
+#ifndef _DRV_ST7789_H_
+#define _DRV_ST7789_H_
 
 #include "stm32f4xx_hal.h"
 
@@ -101,4 +101,4 @@ typedef struct ST7789_Image {
 void ST7789_Init(ST7789_HandleTypeDef* hst7789);
 void ST7789_PrintImage(ST7789_Image *image);
 
-#endif /* ST7789_H */
+#endif /* _DRV_ST7789_H */
