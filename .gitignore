@@ -5,6 +5,49 @@ mx.scratch
 
 # Custom ignore rules
 .DS_Store
-.vscode/
+Thumbs.db
+
+############################################
+# STM32CubeMX / CubeIDE generated extras
+############################################
+# CubeMX may generate temp/backup
+*.bak
+*.tmp
+*.swp
+*~
+
+# If you ever export CubeIDE project files
+*.ioc.bak
+
+############################################
+# Debug / firmware output binaries
+############################################
+*.o
+*.obj
+*.a
+*.lib
+*.elf
+*.axf
+*.map
+*.lst
+*.d
+*.su
+
+*.hex
+*.bin
+
+############################################
+# Logs
+############################################
+*.log
+
+
+
+
+############################################
+# Custom ignore rules
+############################################
+mx.scratch
+
 .external/
 Drivers/
