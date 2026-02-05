@@ -1,9 +1,54 @@
-build
-mx.scratch
-!.settings
+############################################
+# Build outputs (CMake / Make / Ninja)
+############################################
+build/
+cmake-build*/
+**/CMakeFiles/
+**/CMakeCache.txt
+**/cmake_install.cmake
+**/install_manifest.txt
+**/Makefile
+**/*.ninja
+**/*.ninja_deps
+**/*.ninja_log
+compile_commands.json
 
+############################################
+# Toolchain / IDE artifacts (cross-platform)
+############################################
+# VSCode
+.vscode/
 
-# Custom ignore rules
+# CLion / JetBrains
+.idea/
+cmake-build-*/
+
+# Eclipse / STM32CubeIDE
+.project
+.cproject
+.settings/
+*.launch
+
+# Xcode (macOS)
+*.xcworkspace/
+*.xcodeproj/
+DerivedData/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.xcuserstate
+xcuserdata/
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj*
+*.filters
+*.user
+
+# macOS / Windows trash
 .DS_Store
 Thumbs.db
 
