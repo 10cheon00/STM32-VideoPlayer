@@ -36,7 +36,6 @@
 #include <string.h>
 #include "ff_gen_drv.h"
 
-#include "drv_sd_spi.h"
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
@@ -83,7 +82,7 @@ DSTATUS USER_initialize (
 {
   /* USER CODE BEGIN INIT */
     // Stat = STA_NOINIT;
-    return SD_Initialize(pdrv);
+    return RES_OK;
   /* USER CODE END INIT */
 }
 
@@ -97,8 +96,7 @@ DSTATUS USER_status (
 )
 {
   /* USER CODE BEGIN STATUS */
-    Stat = SD_Status(pdrv);
-    return Stat;
+    return RES_OK;
   /* USER CODE END STATUS */
 }
 
@@ -118,7 +116,7 @@ DRESULT USER_read (
 )
 {
   /* USER CODE BEGIN READ */
-    return SD_Read(pdrv, buff, sector, count);
+    return RES_OK;
   /* USER CODE END READ */
 }
 
@@ -140,7 +138,7 @@ DRESULT USER_write (
 {
   /* USER CODE BEGIN WRITE */
   /* USER CODE HERE */
-    return USER_write(pdrv, buff, sector, count);
+    return RES_OK;
   /* USER CODE END WRITE */
 }
 #endif /* _USE_WRITE == 1 */
@@ -160,7 +158,7 @@ DRESULT USER_ioctl (
 )
 {
   /* USER CODE BEGIN IOCTL */
-    return SD_ioctl(pdrv, cmd, buff);
+    return RES_OK;
   /* USER CODE END IOCTL */
 }
 #endif /* _USE_IOCTL == 1 */
