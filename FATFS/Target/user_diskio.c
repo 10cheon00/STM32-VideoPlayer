@@ -81,8 +81,8 @@ DSTATUS USER_initialize (
 )
 {
   /* USER CODE BEGIN INIT */
-    Stat = STA_NOINIT;
-    return Stat;
+    // Stat = STA_NOINIT;
+    return RES_OK;
   /* USER CODE END INIT */
 }
 
@@ -96,8 +96,7 @@ DSTATUS USER_status (
 )
 {
   /* USER CODE BEGIN STATUS */
-    Stat = STA_NOINIT;
-    return Stat;
+    return RES_OK;
   /* USER CODE END STATUS */
 }
 
@@ -159,8 +158,7 @@ DRESULT USER_ioctl (
 )
 {
   /* USER CODE BEGIN IOCTL */
-    DRESULT res = RES_ERROR;
-    return res;
+    return RES_OK;
   /* USER CODE END IOCTL */
 }
 #endif /* _USE_IOCTL == 1 */
