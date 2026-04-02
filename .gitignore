@@ -1,10 +1,98 @@
-build
-mx.scratch
-!.settings
+############################################
+# Build outputs (CMake / Make / Ninja)
+############################################
+build/
+cmake-build*/
+**/CMakeFiles/
+**/CMakeCache.txt
+**/cmake_install.cmake
+**/install_manifest.txt
+**/Makefile
+**/*.ninja
+**/*.ninja_deps
+**/*.ninja_log
+compile_commands.json
 
-
-# Custom ignore rules
-.DS_Store
+############################################
+# Toolchain / IDE artifacts (cross-platform)
+############################################
+# VSCode
 .vscode/
+
+# CLion / JetBrains
+.idea/
+cmake-build-*/
+
+# Eclipse / STM32CubeIDE
+.project
+.cproject
+.settings/
+*.launch
+
+# Xcode (macOS)
+*.xcworkspace/
+*.xcodeproj/
+DerivedData/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.xcuserstate
+xcuserdata/
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj*
+*.filters
+*.user
+
+# macOS / Windows trash
+.DS_Store
+Thumbs.db
+
+############################################
+# STM32CubeMX / CubeIDE generated extras
+############################################
+# CubeMX may generate temp/backup
+*.bak
+*.tmp
+*.swp
+*~
+
+# If you ever export CubeIDE project files
+*.ioc.bak
+
+############################################
+# Debug / firmware output binaries
+############################################
+*.o
+*.obj
+*.a
+*.lib
+*.elf
+*.axf
+*.map
+*.lst
+*.d
+*.su
+
+*.hex
+*.bin
+
+############################################
+# Logs
+############################################
+*.log
+
+
+
+
+############################################
+# Custom ignore rules
+############################################
+mx.scratch
+
 .external/
 Drivers/
