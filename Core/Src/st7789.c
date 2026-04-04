@@ -45,32 +45,42 @@ typedef enum {
 #define NO_PARAMETER 0
 
 static st7789_status_t st7789_send_command(st7789_handle_t *handle,
-                                           uint16_t command,
-                                           uint8_t *parameters,
+                                           uint8_t command, uint8_t *parameters,
                                            uint16_t parameter_length) {
     st7789_status_t status = STATUS_OK;
     HAL_StatusTypeDef hal_status = HAL_OK;
-    uint8_t command_buffer[2] = {(command & 0xFF00) >> 8, (command & 0x00FF)};
 
     // 모듈에게 데이터를 전송할 것이므로 CS를 low로 설정함.
     HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS,
                       GPIO_PIN_RESET);
-    // 명령어를 보낼 땐 DC를 high로 만들어야함.
-    HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC, GPIO_PIN_SET);
+    // 명령어를 보낼 땐 DC를 low로 만들어야함.
+    HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
+                      GPIO_PIN_RESET);
 
     // 인자로 받은 명령어를 전송함
-    hal_status = HAL_SPI_Transmit(handle->hspi, command_buffer, 2, TIMEOUT_MS);
+    hal_status = HAL_SPI_Transmit(handle->hspi, &command, 1, TIMEOUT_MS);
     if (hal_status != HAL_OK) {
         status = STATUS_TRANSMIT_FAILED;
     }
-    // 파라미터를 전송함
-    hal_status = HAL_SPI_Transmit(handle->hspi, parameters, parameter_length,
-                                  TIMEOUT_MS);
+
+    if (parameter_length > 0) {
+        // 파라미터를 전송함
+        // 램에 쓰기를 할 땐 DC를 high로 설정
+        HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
+                          GPIO_PIN_SET);
+
+        hal_status = HAL_SPI_Transmit(handle->hspi, parameters,
+                                      parameter_length, TIMEOUT_MS);
+        if (hal_status != HAL_OK) {
+            status = STATUS_TRANSMIT_FAILED;
+        }
+    }
 
     // 전송이 끝난 후에는 DC, CS핀을 초기화함
     HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS, GPIO_PIN_SET);
     HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
                       GPIO_PIN_RESET);
+
     return status;
 }
 
@@ -97,7 +107,13 @@ st7789_init_handle(st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
 
 st7789_status_t st7789_init_display(st7789_handle_t *handle) {
     st7789_status_t status = STATUS_OK;
-    uint8_t parameters[2] = {0, 0};
+    uint8_t parameter = 0;
+
+    // RST핀에 엣지를 발생시킴
+    HAL_GPIO_WritePin(handle->GPIO_Port_RST, handle->GPIO_Pin_RST,
+                      GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(handle->GPIO_Port_RST, handle->GPIO_Pin_RST,
+                      GPIO_PIN_SET);
 
     // 1. SWRESET 전송 후, 120ms만큼 기다림
     status = st7789_send_command(handle, SWRESET, NO_PARAMETER, 0);
@@ -137,27 +153,25 @@ st7789_status_t st7789_init_display(st7789_handle_t *handle) {
     }
 
     // 6. MADCTL 전송
-    parameters[0] = PAGE_ADDRESS_ORDER_TOP_TO_BOTTOM |
-                    COLUMN_ADDRESS_ORDER_LEFT_TO_RIGHT |
-                    PAGE_COLUMN_ORDER_NORMAL_MODE;
-    parameters[1] = LINE_ADDRESS_ORDER_TOP_TO_BOTTOM | RGB_ORDER_BGR |
-                    DISPLAY_DATA_LATCH_ORDER_LEFT_TO_RIGHT;
-    status = st7789_send_command(handle, MADCTL, parameters, 2);
+    parameter =
+        PAGE_ADDRESS_ORDER_TOP_TO_BOTTOM | COLUMN_ADDRESS_ORDER_LEFT_TO_RIGHT |
+        PAGE_COLUMN_ORDER_NORMAL_MODE | LINE_ADDRESS_ORDER_TOP_TO_BOTTOM |
+        RGB_ORDER_BGR | DISPLAY_DATA_LATCH_ORDER_LEFT_TO_RIGHT;
+    status = st7789_send_command(handle, MADCTL, &parameter, 1);
     if (status != STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
 
     // 7. COLMOD 전송
-    parameters[0] = RGB565_INTERFACE;
-    parameters[1] = COLOR_FORMAT_16BIT;
-    status = st7789_send_command(handle, COLMOD, parameters, 2);
+    parameter = RGB565_INTERFACE | COLOR_FORMAT_16BIT;
+    status = st7789_send_command(handle, COLMOD, &parameter, 1);
     if (status != STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
 
-    return STATUS_OK;
+    return status;
 }
 
 st7789_status_t st7789_print_sample_display(st7789_handle_t *handle) {
