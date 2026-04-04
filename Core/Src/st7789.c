@@ -46,23 +46,26 @@ typedef enum {
 
 static st7789_status_t st7789_send_command(st7789_handle_t *handle,
                                            uint16_t command,
-                                           uint16_t parameter) {
+                                           uint8_t *parameters,
+                                           uint16_t parameter_length) {
     st7789_status_t status = STATUS_OK;
     HAL_StatusTypeDef hal_status = HAL_OK;
-    uint8_t buffer[4] = {(command & 0xFF00) >> 8, (command & 0x00FF),
-                         (parameter & 0xFF00) >> 8, (parameter & 0xFF)};
+    uint8_t command_buffer[2] = {(command & 0xFF00) >> 8, (command & 0x00FF)};
 
     // 모듈에게 데이터를 전송할 것이므로 CS를 low로 설정함.
     HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS,
                       GPIO_PIN_RESET);
     // 명령어를 보낼 땐 DC를 high로 만들어야함.
     HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC, GPIO_PIN_SET);
-    // 인자로 받은 명령어를 전송함
 
-    hal_status = HAL_SPI_Transmit(handle->hspi, buffer, 4, TIMEOUT_MS);
+    // 인자로 받은 명령어를 전송함
+    hal_status = HAL_SPI_Transmit(handle->hspi, command_buffer, 2, TIMEOUT_MS);
     if (hal_status != HAL_OK) {
         status = STATUS_TRANSMIT_FAILED;
     }
+    // 파라미터를 전송함
+    hal_status = HAL_SPI_Transmit(handle->hspi, parameters, parameter_length,
+                                  TIMEOUT_MS);
 
     // 전송이 끝난 후에는 DC, CS핀을 초기화함
     HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS, GPIO_PIN_SET);
@@ -94,11 +97,10 @@ st7789_init_handle(st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
 
 st7789_status_t st7789_init_display(st7789_handle_t *handle) {
     st7789_status_t status = STATUS_OK;
-    uint16_t command = SWRESET;
-    uint16_t parameter = 0;
+    uint8_t parameters[2] = {0, 0};
 
     // 1. SWRESET 전송 후, 120ms만큼 기다림
-    status = st7789_send_command(handle, command, NO_PARAMETER);
+    status = st7789_send_command(handle, SWRESET, NO_PARAMETER, 0);
     HAL_Delay(WAIT_MS);
     if (status != STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
@@ -106,8 +108,7 @@ st7789_status_t st7789_init_display(st7789_handle_t *handle) {
     }
 
     // 2. SLPOUT 전송 후, 150ms 만큼 기다림
-    command = SLPOUT;
-    status = st7789_send_command(handle, command, NO_PARAMETER);
+    status = st7789_send_command(handle, SLPOUT, NO_PARAMETER, 0);
     HAL_Delay(WAIT_MS);
     if (status != STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
@@ -115,45 +116,42 @@ st7789_status_t st7789_init_display(st7789_handle_t *handle) {
     }
 
     // 3. NORON 전송
-    command = NORON;
-    status = st7789_send_command(handle, command, NO_PARAMETER);
+    status = st7789_send_command(handle, NORON, NO_PARAMETER, 0);
     if (status != STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
 
     // 4. INVOFF 전송
-    command = INVOFF;
-    status = st7789_send_command(handle, command, NO_PARAMETER);
+    status = st7789_send_command(handle, INVOFF, NO_PARAMETER, 0);
     if (status != STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
 
     // 5. DISPON 전송
-    command = DISPON;
-    status = st7789_send_command(handle, command, NO_PARAMETER);
+    status = st7789_send_command(handle, DISPON, NO_PARAMETER, 0);
     if (status != STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
 
     // 6. MADCTL 전송
-    command = MADCTL;
-    parameter =
-        PAGE_ADDRESS_ORDER_TOP_TO_BOTTOM | COLUMN_ADDRESS_ORDER_LEFT_TO_RIGHT |
-        PAGE_COLUMN_ORDER_NORMAL_MODE | LINE_ADDRESS_ORDER_TOP_TO_BOTTOM |
-        RGB_ORDER_BGR | DISPLAY_DATA_LATCH_ORDER_LEFT_TO_RIGHT;
-    status = st7789_send_command(handle, command, parameter);
+    parameters[0] = PAGE_ADDRESS_ORDER_TOP_TO_BOTTOM |
+                    COLUMN_ADDRESS_ORDER_LEFT_TO_RIGHT |
+                    PAGE_COLUMN_ORDER_NORMAL_MODE;
+    parameters[1] = LINE_ADDRESS_ORDER_TOP_TO_BOTTOM | RGB_ORDER_BGR |
+                    DISPLAY_DATA_LATCH_ORDER_LEFT_TO_RIGHT;
+    status = st7789_send_command(handle, MADCTL, parameters, 2);
     if (status != STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
 
     // 7. COLMOD 전송
-    command = COLMOD;
-    parameter = RGB565_INTERFACE | COLOR_FORMAT_16BIT;
-    status = st7789_send_command(handle, command, parameter);
+    parameters[0] = RGB565_INTERFACE;
+    parameters[1] = COLOR_FORMAT_16BIT;
+    status = st7789_send_command(handle, COLMOD, parameters, 2);
     if (status != STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
