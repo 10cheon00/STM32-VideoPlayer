@@ -85,7 +85,7 @@ static st7789_status_t st7789_send_command(st7789_handle_t *handle,
     return status;
 }
 
-static st7789_status_t st7789_send_pixel(st7789_handle_t *handle,
+static st7789_status_t st7789_send_image(st7789_handle_t *handle,
                                          st7789_rgb565_t *image, uint16_t sx,
                                          uint16_t sy, uint16_t ex,
                                          uint16_t ey) {
