@@ -23,9 +23,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-
 #include "stm32f4xx_hal.h"
+
+#include "st7789.h"
 
 /* USER CODE END Includes */
 
@@ -47,6 +47,8 @@
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
+
+st7789_handle_t st7789_handle;
 
 /* USER CODE BEGIN PV */
 
@@ -103,7 +105,11 @@ int main(void) {
     MX_FATFS_Init();
     MX_LIBJPEG_Init();
     /* USER CODE BEGIN 2 */
-
+    st7789_init_handle(&st7789_handle, &hspi1, LCD_CS_GPIO_Port,
+                       LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, GPIOA, GPIOA,
+                       LCD_CS_Pin, LCD_DC_Pin, LCD_RST_Pin, GPIO_PIN_5,
+                       GPIO_PIN_7);
+    st7789_init_display(&st7789_handle);
     /* USER CODE END 2 */
 
     /* Infinite loop */
