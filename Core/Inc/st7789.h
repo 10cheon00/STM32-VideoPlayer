@@ -27,6 +27,8 @@ typedef struct {
     uint16_t GPIO_Pin_SDA;
 } st7789_handle_t;
 
+typedef uint16_t st7789_rgb565_t;
+
 /**
  * 데이터 시트에 따르면 통신에 앞서 인터페이스 선택이 필요함. 시리얼 통신의 경우
  * 4가지 인터페이스가 존재하는데, SPI를 사용하므로 4-line serial interface I를

@@ -11,6 +11,7 @@ typedef enum {
     DISPON = 0x29,
     CASET = 0x2A,
     RASET = 0x2B,
+    RAMWR = 0x2C,
     MADCTL = 0x36,
     COLMOD = 0x3A,
 } st7789_command_t;
@@ -82,6 +83,50 @@ static st7789_status_t st7789_send_command(st7789_handle_t *handle,
                       GPIO_PIN_RESET);
 
     return status;
+}
+
+static st7789_status_t st7789_send_pixel(st7789_handle_t *handle,
+                                         st7789_rgb565_t *image, uint16_t sx,
+                                         uint16_t sy, uint16_t ex,
+                                         uint16_t ey) {
+    st7789_status_t status = STATUS_OK;
+    uint8_t parameters[4] = {
+        (uint8_t)((sx & 0xFF00) >> 8),
+        (uint8_t)(sx & 0x00FF),
+        (uint8_t)((ex & 0xFF00) >> 8),
+        (uint8_t)(ex & 0x00FF),
+    };
+    uint16_t image_length = (ex - sx) * (ey - sy);
+
+    // 1. CASET 전송
+    // TODO:램에 쓰는거니까 DC를 1로 설정
+    // 파라미터는 시작 주소를 먼저, 종료 주소를 나중에 전송
+    status = st7789_send_command(handle, CASET, parameters, 4);
+    if (status != STATUS_OK) {
+        // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
+        // 대한 구현은 미룸
+    }
+
+    // 2. RASET 전송
+    // 파라미터는 시작 주소를 먼저, 종료 주소를 나중에 전송
+    parameters[0] = (uint8_t)((sy & 0xFF00) >> 8);
+    parameters[1] = (uint8_t)(sy & 0x00FF);
+    parameters[2] = (uint8_t)((ey & 0xFF00) >> 8);
+    parameters[3] = (uint8_t)(ey & 0x00FF);
+    status = st7789_send_command(handle, CASET, parameters, 4);
+    if (status != STATUS_OK) {
+        // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
+        // 대한 구현은 미룸
+    }
+
+    // 3. RAMWR 전송
+    status = st7789_send_command(handle, RAMWR, (uint8_t *)image, image_length);
+    if (status != STATUS_OK) {
+        // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
+        // 대한 구현은 미룸
+    }
+
+    return STATUS_OK;
 }
 
 st7789_status_t
@@ -175,5 +220,6 @@ st7789_status_t st7789_init_display(st7789_handle_t *handle) {
 }
 
 st7789_status_t st7789_print_sample_display(st7789_handle_t *handle) {
+
     return STATUS_OK;
 }
