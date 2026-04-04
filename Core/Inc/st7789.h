@@ -10,7 +10,7 @@
 
 typedef enum {
     STATUS_OK = 0,
-
+    STATUS_TRANSMIT_FAILED,
 } st7789_status_t;
 
 typedef struct {
@@ -31,24 +31,27 @@ typedef struct {
  * 데이터 시트에 따르면 통신에 앞서 인터페이스 선택이 필요함. 시리얼 통신의 경우
  * 4가지 인터페이스가 존재하는데, SPI를 사용하므로 4-line serial interface I를
  * 선택함.(출력 선이 필요없음)
- *
+ * CS = CS
+ * WRX = DC
+ * DCX = SCL
+ * SDA = SDA
  * DC가 low면 명령어를 받는 것으로, high면 메모리에 쓰는 것으로 이해한다.
  * CS가 falling edge면 해당 모듈을 선택한 것으로 판단하고 SDA와 SCL에 전달되는
  * 데이터를 받고, 처리한다.
  *
  * SWRESET 명령을 보내면 디스플레이가 내부를 초기화한다. 명령을 보내기 전 5ms,
  * 명령을 보낸 후 120ms를 기다려야 한다.
- *
  * Sleep in 상태에 돌입하면 절전 모드에 진입한다.
  * Sleep out 명령을 보내면 Sleep in 상태를 해제하고 내부를 초기화한다.
  *
  * Sleep out 명령어가 실행되면 다음 항목들을 설정해야한다.
  * - Normal / Partial display mode
  * - Display Inversion On/Off
- * - Gamma Set
  * - Display On/Off
  * - Memory Data Access Control
  * - Interface Pixel Format
+ *
+ *
  */
 
 static st7789_status_t
