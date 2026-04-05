@@ -11,7 +11,7 @@ microSD카드에 담긴 영상을 ST7789 LCD 모듈에 출력하는 시스템을
  - ST LINK V2 MINI 미니 STM8 STM32 다운로더
  - 아두이노 MicroSD 카드 소켓 모듈
  - 샌디스크 MicroSDHC Class4 마이크로SD
-- 1.54 인치 1.54 "풀 컬러 TFT 디스플레이 모듈 HD IPS LCD LED 스크린 Arduino 용 240x240 SPI 인터페이스 ST7789
+ - 1.54 인치 1.54 "풀 컬러 TFT 디스플레이 모듈 HD IPS LCD LED 스크린 Arduino 용 240x240 SPI 인터페이스 ST7789
 
 # 특징
 
