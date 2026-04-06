@@ -4,6 +4,11 @@ micro_sd_status_t micro_sd_init_handle(micro_sd_handle_t *handle,
                                        SPI_HandleTypeDef *hspi,
                                        GPIO_TypeDef *GPIO_Port_CS,
                                        uint16_t GPIO_Pin_CS) {
+
+    handle->hspi = hspi;
+    handle->GPIO_Port_CS = GPIO_Port_CS;
+    handle->GPIO_Pin_CS = GPIO_Pin_CS;
+    
     return STATUS_OK;
 }
 
