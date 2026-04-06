@@ -8,7 +8,7 @@ micro_sd_status_t micro_sd_init_handle(micro_sd_handle_t *handle,
     handle->hspi = hspi;
     handle->GPIO_Port_CS = GPIO_Port_CS;
     handle->GPIO_Pin_CS = GPIO_Pin_CS;
-    
+
     return STATUS_OK;
 }
 
@@ -16,23 +16,20 @@ micro_sd_status_t micro_sd_init_card(micro_sd_handle_t *handle) {
     return STATUS_OK;
 }
 
-micro_sd_status_t micro_sd_change_directory(micro_sd_handle_t *handle,
-                                            const char *path) {
+micro_sd_status_t micro_sd_get_status(micro_sd_handle_t *handle) {
     return STATUS_OK;
 }
 
-micro_sd_status_t micro_sd_open_file(micro_sd_handle_t *handle,
-                                     const char *filename,
-                                     micro_sd_file_t *file) {
+micro_sd_status_t micro_sd_read_block(micro_sd_handle_t *handle, BYTE *buffer,
+                                      DWORD sector, UINT count) {
     return STATUS_OK;
 }
 
-micro_sd_status_t micro_sd_read_file_header(micro_sd_handle_t *handle,
-                                            micro_sd_file_t *file) {
+micro_sd_status_t micro_sd_write_block(micro_sd_handle_t *handle, BYTE cmd,
+                                       BYTE *buffer) {
     return STATUS_OK;
 }
 
-micro_sd_status_t micro_sd_close_file(micro_sd_handle_t *handle,
-                                      micro_sd_file_t *file) {
+micro_sd_status_t micro_sd_ioctl(micro_sd_handle_t *handle) {
     return STATUS_OK;
 }
