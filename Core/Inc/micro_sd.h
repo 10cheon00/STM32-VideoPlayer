@@ -13,9 +13,7 @@ typedef struct {
 
 typedef enum {
     STATUS_OK = 0,
-    STATUS_NO_FOLDER_EXIST,
-    STATUS_NO_FILE_EXIST,
-    STATUS_FAILED_TO_READ_FILE
+    STATUS_HANDLE_NOT_VALID,
 } micro_sd_status_t;
 
 typedef struct {
@@ -48,6 +46,8 @@ micro_sd_status_t micro_sd_init_handle(micro_sd_handle_t *handle,
                                        GPIO_TypeDef *GPIO_Port_CS,
                                        uint16_t GPIO_Pin_CS);
 
+micro_sd_status_t micro_sd_is_valid_handle(micro_sd_handle_t *handle);
+
 micro_sd_status_t micro_sd_init_card(micro_sd_handle_t *handle);
 
 micro_sd_status_t micro_sd_get_status(micro_sd_handle_t *handle);
@@ -55,9 +55,10 @@ micro_sd_status_t micro_sd_get_status(micro_sd_handle_t *handle);
 micro_sd_status_t micro_sd_read_block(micro_sd_handle_t *handle, BYTE *buffer,
                                       DWORD sector, UINT count);
 
-micro_sd_status_t micro_sd_write_block(micro_sd_handle_t *handle, BYTE cmd,
-                                       BYTE *buffer);
+micro_sd_status_t micro_sd_write_block(micro_sd_handle_t *handle, BYTE *buffer,
+                                       DWORD sector, UINT count);
 
-micro_sd_status_t micro_sd_ioctl(micro_sd_handle_t *handle);
+micro_sd_status_t micro_sd_ioctl(micro_sd_handle_t *handle, BYTE cmd,
+                                 BYTE *buffer);
 
 #endif
