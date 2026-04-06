@@ -48,7 +48,7 @@ typedef uint16_t st7789_rgb565_t;
  *
  * Sleep out 명령어가 실행되면 다음 항목들을 설정해야한다.
  * - Normal / Partial display mode
- * - Display Inversion On/Off
+ * - Display Inversion On/Off  -> 색상값 뒤집기 (rgb가 cmyk로 바뀜)
  * - Display On/Off
  * - Memory Data Access Control
  * - Interface Pixel Format

@@ -7,7 +7,7 @@ typedef enum {
     SWRESET = 0x01,
     SLPOUT = 0x11,
     NORON = 0x13,
-    INVOFF = 0x20,
+    INVON = 0x21,
     DISPON = 0x29,
     CASET = 0x2A,
     RASET = 0x2B,
@@ -113,14 +113,15 @@ static st7789_status_t st7789_send_image(st7789_handle_t *handle,
     parameters[1] = (uint8_t)(sy & 0x00FF);
     parameters[2] = (uint8_t)((ey & 0xFF00) >> 8);
     parameters[3] = (uint8_t)(ey & 0x00FF);
-    status = st7789_send_command(handle, CASET, parameters, 4);
+    status = st7789_send_command(handle, RASET, parameters, 4);
     if (status != STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
 
     // 3. RAMWR 전송
-    status = st7789_send_command(handle, RAMWR, (uint8_t *)image, image_length);
+    status =
+        st7789_send_command(handle, RAMWR, (uint8_t *)image, 2 * image_length);
     if (status != STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
@@ -183,8 +184,8 @@ st7789_status_t st7789_init_display(st7789_handle_t *handle) {
         // 대한 구현은 미룸
     }
 
-    // 4. INVOFF 전송
-    status = st7789_send_command(handle, INVOFF, NO_PARAMETER, 0);
+    // 4. INVON 전송
+    status = st7789_send_command(handle, INVON, NO_PARAMETER, 0);
     if (status != STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
@@ -201,7 +202,7 @@ st7789_status_t st7789_init_display(st7789_handle_t *handle) {
     parameter =
         PAGE_ADDRESS_ORDER_TOP_TO_BOTTOM | COLUMN_ADDRESS_ORDER_LEFT_TO_RIGHT |
         PAGE_COLUMN_ORDER_NORMAL_MODE | LINE_ADDRESS_ORDER_TOP_TO_BOTTOM |
-        RGB_ORDER_BGR | DISPLAY_DATA_LATCH_ORDER_LEFT_TO_RIGHT;
+        RGB_ORDER_RGB | DISPLAY_DATA_LATCH_ORDER_LEFT_TO_RIGHT;
     status = st7789_send_command(handle, MADCTL, &parameter, 1);
     if (status != STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
@@ -220,6 +221,27 @@ st7789_status_t st7789_init_display(st7789_handle_t *handle) {
 }
 
 st7789_status_t st7789_print_sample_display(st7789_handle_t *handle) {
+    uint16_t image[240] = {0};
 
+    for (uint16_t y = 0; y < 80; y++) {
+        for (uint16_t i = 0; i < 240; i++) {
+            image[i] = 0x00F8;
+        }
+        st7789_send_image(handle, image, 0, y, 240, y + 1);
+    }
+
+    for (uint16_t y = 80; y < 160; y++) {
+        for (uint16_t i = 0; i < 240; i++) {
+            image[i] = 0xE007;
+        }
+        st7789_send_image(handle, image, 0, y, 240, y + 1);
+    }
+
+    for (uint16_t y = 160; y < 240; y++) {
+        for (uint16_t i = 0; i < 240; i++) {
+            image[i] = 0x1F00;
+        }
+        st7789_send_image(handle, image, 0, y, 240, y + 1);
+    }
     return STATUS_OK;
 }

@@ -110,6 +110,7 @@ int main(void) {
                        LCD_CS_Pin, LCD_DC_Pin, LCD_RST_Pin, GPIO_PIN_5,
                        GPIO_PIN_7);
     st7789_init_display(&st7789_handle);
+    st7789_print_sample_display(&st7789_handle);
     /* USER CODE END 2 */
 
     /* Infinite loop */
