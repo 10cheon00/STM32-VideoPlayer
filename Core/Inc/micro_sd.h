@@ -16,9 +16,14 @@ typedef struct {
 } micro_sd_handle_t;
 
 typedef enum {
-    STATUS_OK = 0,
-    STATUS_HANDLE_NOT_VALID,
-    STATUS_FAILED_TO_REDUCE_SPI_CLOCK,
+    MICRO_SD_HANDLE_STATUS_OK = 0,
+    MICRO_SD_HANDLE_STATUS_INVALID,
+} micro_sd_handle_status_t;
+
+typedef enum {
+    MICRO_SD_STATUS_OK = 0,
+    MICRO_SD_STATUS_HANDLE_NOT_VALID,
+    MICRO_SD_STATUS_FAILED_TO_REDUCE_SPI_CLOCK,
 } micro_sd_status_t;
 
 typedef struct {
@@ -51,7 +56,7 @@ micro_sd_status_t micro_sd_init_handle(
     GPIO_TypeDef *GPIO_Port_CS, uint16_t GPIO_Pin_CS,
     micro_sd_spi_bus_clock_t (*micro_sd_get_spi_bus_clock_callback)());
 
-micro_sd_status_t micro_sd_is_valid_handle(micro_sd_handle_t *handle);
+micro_sd_handle_status_t micro_sd_get_handle_status(micro_sd_handle_t *handle);
 
 micro_sd_status_t micro_sd_init_card(micro_sd_handle_t *handle);
 

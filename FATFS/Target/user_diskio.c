@@ -81,8 +81,8 @@ USER_initialize(BYTE pdrv /* Physical drive nmuber to identify the drive */
     Stat = STA_NOINIT;
 
     micro_sd_handle_t *handle = micro_sd_get_handle();
-    if (micro_sd_is_valid_handle(handle) &&
-        micro_sd_init_card(handle) == STATUS_OK) {
+    if (micro_sd_get_handle_status(handle) == MICRO_SD_HANDLE_STATUS_OK &&
+        micro_sd_init_card(handle) == MICRO_SD_STATUS_OK) {
         Stat = 0;
     }
 
@@ -100,8 +100,8 @@ DSTATUS USER_status(BYTE pdrv /* Physical drive number to identify the drive */
     /* USER CODE BEGIN STATUS */
     if (Stat == 0) {
         micro_sd_handle_t *handle = micro_sd_get_handle();
-        if (micro_sd_is_valid_handle(handle) ||
-            micro_sd_get_status(handle) != STATUS_OK) {
+        if (micro_sd_get_handle_status(handle) == MICRO_SD_HANDLE_STATUS_OK ||
+            micro_sd_get_status(handle) != MICRO_SD_STATUS_OK) {
             Stat = STA_NOINIT;
         }
     }
@@ -127,8 +127,9 @@ DRESULT USER_read(BYTE pdrv,  /* Physical drive nmuber to identify the drive */
     DRESULT res = RES_ERROR;
 
     micro_sd_handle_t *handle = micro_sd_get_handle();
-    if (micro_sd_is_valid_handle(handle) &&
-        micro_sd_read_block(handle, buff, sector, count) == STATUS_OK) {
+    if (micro_sd_get_handle_status(handle) == MICRO_SD_HANDLE_STATUS_OK &&
+        micro_sd_read_block(handle, buff, sector, count) ==
+            MICRO_SD_STATUS_OK) {
         Stat = RES_OK;
     }
 
@@ -155,8 +156,9 @@ DRESULT USER_write(BYTE pdrv, /* Physical drive nmuber to identify the drive */
     DRESULT res = RES_ERROR;
 
     micro_sd_handle_t *handle = micro_sd_get_handle();
-    if (micro_sd_is_valid_handle(handle) &&
-        micro_sd_write_block(handle, buff, sector, count) == STATUS_OK) {
+    if (micro_sd_get_handle_status(handle) == MICRO_SD_HANDLE_STATUS_OK &&
+        micro_sd_write_block(handle, buff, sector, count) ==
+            MICRO_SD_STATUS_OK) {
         res = RES_OK;
     }
     return res;
@@ -180,8 +182,8 @@ DRESULT USER_ioctl(BYTE pdrv, /* Physical drive nmuber (0..) */
     DRESULT res = RES_ERROR;
 
     micro_sd_handle_t *handle = micro_sd_get_handle();
-    if (micro_sd_is_valid_handle(handle) &&
-        micro_sd_ioctl(handle, cmd, buff) == STATUS_OK) {
+    if (micro_sd_get_handle_status(handle) == MICRO_SD_HANDLE_STATUS_OK &&
+        micro_sd_ioctl(handle, cmd, buff) == MICRO_SD_STATUS_OK) {
         res = RES_OK;
     }
 

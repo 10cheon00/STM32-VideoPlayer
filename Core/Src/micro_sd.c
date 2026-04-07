@@ -20,25 +20,32 @@ static micro_sd_status_t micro_sd_reduce_spi_clock_to_range_of_100khz_to_400khz(
     const micro_sd_spi_bus_clock_t bus_clock =
         handle->micro_sd_get_spi_bus_clock_callback();
 
-    micro_sd_status_t status = STATUS_FAILED_TO_REDUCE_SPI_CLOCK;
+    micro_sd_status_t status = MICRO_SD_STATUS_FAILED_TO_REDUCE_SPI_CLOCK;
 
-    if (micro_sd_is_valid_handle(handle)) {
+    if (micro_sd_get_handle_status(handle) == MICRO_SD_HANDLE_STATUS_OK) {
         for (uint8_t i = 0; i < 8; i++) {
             uint32_t spi_clock = bus_clock / prescaler_entries[i].div;
             if (spi_clock >= SPI_MIN_KHZ && spi_clock <= SPI_MAX_KHZ) {
                 handle->hspi->Init.BaudRatePrescaler =
                     prescaler_entries[i].hal_spi_prescaler;
                 if (HAL_SPI_Init(handle->hspi) == HAL_OK) {
-                    status = STATUS_OK;
+                    status = MICRO_SD_STATUS_OK;
                     break;
                 } else {
-                    status = STATUS_FAILED_TO_REDUCE_SPI_CLOCK;
+                    status = MICRO_SD_STATUS_FAILED_TO_REDUCE_SPI_CLOCK;
                 }
             }
         }
     }
 
     return status;
+}
+
+static micro_sd_status_t
+micro_sd_restore_spi_clock(micro_sd_handle_t *handle,
+                           uint32_t original_BaudRatePrescaler) {
+    handle->hspi->Init.BaudRatePrescaler = original_BaudRatePrescaler;
+    return HAL_SPI_Init(handle->hspi);
 }
 
 micro_sd_status_t micro_sd_init_handle(
@@ -52,33 +59,32 @@ micro_sd_status_t micro_sd_init_handle(
     handle->micro_sd_get_spi_bus_clock_callback =
         micro_sd_get_spi_bus_clock_callback;
 
-    return STATUS_OK;
+    return MICRO_SD_STATUS_OK;
 }
 
-micro_sd_status_t micro_sd_is_valid_handle(micro_sd_handle_t *handle) {
-    micro_sd_status_t status = STATUS_OK;
+micro_sd_handle_status_t micro_sd_get_handle_status(micro_sd_handle_t *handle) {
+    micro_sd_handle_status_t handle_status = MICRO_SD_HANDLE_STATUS_OK;
 
     if (handle == NULL) {
-        status = STATUS_HANDLE_NOT_VALID;
+        handle_status = MICRO_SD_HANDLE_STATUS_INVALID;
     } else {
         if (handle->hspi == NULL || handle->GPIO_Port_CS == NULL ||
-            handle->GPIO_Pin_CS == NULL ||
+            handle->GPIO_Pin_CS == 0 ||
             handle->micro_sd_get_spi_bus_clock_callback == NULL) {
-            status = STATUS_HANDLE_NOT_VALID;
+            handle_status = MICRO_SD_HANDLE_STATUS_INVALID;
         }
     }
 
-    return status;
+    return handle_status;
 }
 
 micro_sd_status_t micro_sd_init_card(micro_sd_handle_t *handle) {
-    micro_sd_status_t status = STATUS_OK;
+    micro_sd_status_t status = MICRO_SD_STATUS_OK;
     // 1. spi 클럭 낮추기
     // 나중에 spi의 클럭을 되돌려야 하므로, 원본 클럭 정보값을 기억해두기
     uint32_t original_BaudRatePrescaler = handle->hspi->Init.BaudRatePrescaler;
-    if (status == STATUS_OK &&
-        micro_sd_reduce_spi_clock_to_range_of_100khz_to_400khz(handle) !=
-            HAL_OK) {
+    if (status == MICRO_SD_STATUS_OK) {
+        status = micro_sd_reduce_spi_clock_to_range_of_100khz_to_400khz(handle);
     }
 
     // 2. sd카드를 spi모드로 전환하기
@@ -86,29 +92,28 @@ micro_sd_status_t micro_sd_init_card(micro_sd_handle_t *handle) {
     // 3. sd카드의 정보 획득하기
 
     // 4. 낮추었던 spi 클럭 되돌리기
-    if (status == STATUS_OK &&
-        micro_sd_restore_spi_clock(handle, original_BaudRatePrescaler) !=
-            HAL_OK) {
+    if (status == MICRO_SD_STATUS_OK) {
+        status = micro_sd_restore_spi_clock(handle, original_BaudRatePrescaler);
     }
 
     return status;
 }
 
 micro_sd_status_t micro_sd_get_status(micro_sd_handle_t *handle) {
-    return STATUS_OK;
+    return MICRO_SD_STATUS_OK;
 }
 
 micro_sd_status_t micro_sd_read_block(micro_sd_handle_t *handle, BYTE *buffer,
                                       DWORD sector, UINT count) {
-    return STATUS_OK;
+    return MICRO_SD_STATUS_OK;
 }
 
 micro_sd_status_t micro_sd_write_block(micro_sd_handle_t *handle, BYTE *buffer,
                                        DWORD sector, UINT count) {
-    return STATUS_OK;
+    return MICRO_SD_STATUS_OK;
 }
 
 micro_sd_status_t micro_sd_ioctl(micro_sd_handle_t *handle, BYTE cmd,
                                  BYTE *buffer) {
-    return STATUS_OK;
+    return MICRO_SD_STATUS_OK;
 }
