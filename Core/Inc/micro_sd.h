@@ -5,15 +5,20 @@
 
 #include "stm32f4xx_hal.h"
 
+typedef uint32_t micro_sd_spi_bus_clock_t;
+
 typedef struct {
     SPI_HandleTypeDef *hspi;
     GPIO_TypeDef *GPIO_Port_CS;
     uint16_t GPIO_Pin_CS;
+
+    micro_sd_spi_bus_clock_t (*micro_sd_get_spi_bus_clock_callback)();
 } micro_sd_handle_t;
 
 typedef enum {
     STATUS_OK = 0,
     STATUS_HANDLE_NOT_VALID,
+    STATUS_FAILED_TO_REDUCE_SPI_CLOCK,
 } micro_sd_status_t;
 
 typedef struct {
@@ -41,10 +46,10 @@ typedef struct {
  */
 micro_sd_handle_t *micro_sd_get_handle();
 
-micro_sd_status_t micro_sd_init_handle(micro_sd_handle_t *handle,
-                                       SPI_HandleTypeDef *hspi,
-                                       GPIO_TypeDef *GPIO_Port_CS,
-                                       uint16_t GPIO_Pin_CS);
+micro_sd_status_t micro_sd_init_handle(
+    micro_sd_handle_t *handle, SPI_HandleTypeDef *hspi,
+    GPIO_TypeDef *GPIO_Port_CS, uint16_t GPIO_Pin_CS,
+    micro_sd_spi_bus_clock_t (*micro_sd_get_spi_bus_clock_callback)());
 
 micro_sd_status_t micro_sd_is_valid_handle(micro_sd_handle_t *handle);
 
