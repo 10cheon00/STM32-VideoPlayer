@@ -5,8 +5,9 @@ typedef struct {
     uint16_t div;
 } micro_sd_spi_prescaler_entry_t;
 
-#define SPI_MIN_KHZ 100000U
-#define SPI_MAX_KHZ 400000U
+#define SPI_MIN_HZ 100000U
+#define SPI_MAX_HZ 200000U
+#define TIMEOUT_MS 500
 
 static micro_sd_status_t micro_sd_reduce_spi_clock_to_range_of_100khz_to_400khz(
     micro_sd_handle_t *handle) {
@@ -25,7 +26,7 @@ static micro_sd_status_t micro_sd_reduce_spi_clock_to_range_of_100khz_to_400khz(
     if (micro_sd_get_handle_status(handle) == MICRO_SD_HANDLE_STATUS_OK) {
         for (uint8_t i = 0; i < 8; i++) {
             uint32_t spi_clock = bus_clock / prescaler_entries[i].div;
-            if (spi_clock >= SPI_MIN_KHZ && spi_clock <= SPI_MAX_KHZ) {
+            if (spi_clock >= SPI_MIN_HZ && spi_clock <= SPI_MAX_HZ) {
                 handle->hspi->Init.BaudRatePrescaler =
                     prescaler_entries[i].hal_spi_prescaler;
                 if (HAL_SPI_Init(handle->hspi) == HAL_OK) {
