@@ -9,6 +9,17 @@ typedef struct {
 #define SPI_MAX_HZ 200000U
 #define TIMEOUT_MS 500
 
+static micro_sd_status_t micro_sd_send_command(micro_sd_handle_t *handle,
+                                               uint8_t command) {
+    micro_sd_status_t status = MICRO_SD_STATUS_OK;
+    while (HAL_SPI_GetState(handle->hspi) != HAL_SPI_STATE_READY)
+        ;
+    if (HAL_SPI_Transmit(handle->hspi, &command, 1, TIMEOUT_MS) != HAL_OK) {
+        status = MICRO_SD_STATUS_FAILED_TO_SEND_COMMAND;
+    }
+    return status;
+}
+
 static micro_sd_status_t micro_sd_reduce_spi_clock_to_range_of_100khz_to_400khz(
     micro_sd_handle_t *handle) {
     static const micro_sd_spi_prescaler_entry_t prescaler_entries[8] = {
@@ -39,6 +50,59 @@ static micro_sd_status_t micro_sd_reduce_spi_clock_to_range_of_100khz_to_400khz(
         }
     }
 
+    return status;
+}
+
+static micro_sd_status_t micro_sd_enter_spi_mode(micro_sd_handle_t *handle) {
+    micro_sd_status_t status = MICRO_SD_STATUS_FAILED_TO_ENTER_SPI_MODE;
+    if (micro_sd_get_handle_status(handle) == MICRO_SD_HANDLE_STATUS_OK) {
+        status = MICRO_SD_STATUS_OK;
+
+        HAL_Delay(1);
+
+        // 1. CS와 MOSI라인을 high로 두고 74클럭 전송
+        if (status == MICRO_SD_STATUS_OK) {
+            HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS,
+                              GPIO_PIN_SET);
+
+            for (uint8_t i = 0; i < 8; i++) {
+                if (micro_sd_send_command(handle, 0xFF) != MICRO_SD_STATUS_OK) {
+                    status = MICRO_SD_STATUS_FAILED_TO_ENTER_SPI_MODE;
+                    break;
+                }
+            }
+        }
+
+        // 2. CS를 low로 설정하고 CMD0 + 지정된 CRC값 전송
+        if (status == MICRO_SD_STATUS_OK) {
+            HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS,
+                              GPIO_PIN_RESET);
+            uint8_t cmd0[6] = {0x40, 0, 0, 0, 0, 0x95};
+            for (uint8_t i = 0; i < 6; i++) {
+                if (micro_sd_send_command(handle, cmd0[i]) !=
+                    MICRO_SD_STATUS_OK) {
+                    status = MICRO_SD_STATUS_FAILED_TO_ENTER_SPI_MODE;
+                    break;
+                }
+            }
+        }
+
+        // 3. 타임아웃될 때까지 응답 확인
+        if (status == MICRO_SD_STATUS_OK) {
+            uint8_t dummy = 0xFF, response = 0, retry = 255;
+            uint8_t i = 0;
+            HAL_StatusTypeDef hal_status;
+            do {
+                hal_status = HAL_SPI_TransmitReceive(
+                    handle->hspi, &dummy, &response, 1, TIMEOUT_MS);
+
+            } while ((response != 0x01) && (--retry));
+
+            if (retry == 0) {
+                status = MICRO_SD_STATUS_FAILED_TO_ENTER_SPI_MODE;
+            }
+        }
+    }
     return status;
 }
 
@@ -89,6 +153,9 @@ micro_sd_status_t micro_sd_init_card(micro_sd_handle_t *handle) {
     }
 
     // 2. sd카드를 spi모드로 전환하기
+    if (status == MICRO_SD_STATUS_OK) {
+        status = micro_sd_enter_spi_mode(handle);
+    }
 
     // 3. sd카드의 정보 획득하기
 
