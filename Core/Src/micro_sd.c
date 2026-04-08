@@ -160,9 +160,7 @@ micro_sd_status_t micro_sd_init_card(micro_sd_handle_t *handle) {
     // 3. sd카드의 정보 획득하기
 
     // 4. 낮추었던 spi 클럭 되돌리기
-    if (status == MICRO_SD_STATUS_OK) {
-        status = micro_sd_restore_spi_clock(handle, original_BaudRatePrescaler);
-    }
+    status = micro_sd_restore_spi_clock(handle, original_BaudRatePrescaler);
 
     return status;
 }
