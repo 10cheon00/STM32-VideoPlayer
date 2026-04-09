@@ -45,12 +45,13 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-SPI_HandleTypeDef hspi1;
-SPI_HandleTypeDef hspi2;
+SD_HandleTypeDef hsd;
 
-st7789_handle_t st7789_handle;
+SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
+
+st7789_handle_t st7789_handle;
 
 /* USER CODE END PV */
 
@@ -58,7 +59,7 @@ st7789_handle_t st7789_handle;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI1_Init(void);
-static void MX_SPI2_Init(void);
+static void MX_SDIO_SD_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -101,9 +102,7 @@ int main(void) {
     MX_SPI1_Init();
     MX_FATFS_Init();
     MX_LIBJPEG_Init();
-    MX_SPI2_Init();
-    MX_FATFS_Init();
-    MX_LIBJPEG_Init();
+    //   MX_SDIO_SD_Init();
     /* USER CODE BEGIN 2 */
     st7789_init_handle(&st7789_handle, &hspi1, LCD_CS_GPIO_Port,
                        LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, GPIOA, GPIOA,
@@ -147,7 +146,7 @@ void SystemClock_Config(void) {
     RCC_OscInitStruct.PLL.PLLM = 8;
     RCC_OscInitStruct.PLL.PLLN = 100;
     RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-    RCC_OscInitStruct.PLL.PLLQ = 4;
+    RCC_OscInitStruct.PLL.PLLQ = 5;
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
         Error_Handler();
     }
@@ -164,6 +163,38 @@ void SystemClock_Config(void) {
     if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK) {
         Error_Handler();
     }
+}
+
+/**
+ * @brief SDIO Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_SDIO_SD_Init(void) {
+
+    /* USER CODE BEGIN SDIO_Init 0 */
+
+    /* USER CODE END SDIO_Init 0 */
+
+    /* USER CODE BEGIN SDIO_Init 1 */
+
+    /* USER CODE END SDIO_Init 1 */
+    hsd.Instance = SDIO;
+    hsd.Init.ClockEdge = SDIO_CLOCK_EDGE_RISING;
+    hsd.Init.ClockBypass = SDIO_CLOCK_BYPASS_DISABLE;
+    hsd.Init.ClockPowerSave = SDIO_CLOCK_POWER_SAVE_DISABLE;
+    hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
+    hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
+    hsd.Init.ClockDiv = 0;
+    if (HAL_SD_Init(&hsd) != HAL_OK) {
+        Error_Handler();
+    }
+    if (HAL_SD_ConfigWideBusOperation(&hsd, SDIO_BUS_WIDE_4B) != HAL_OK) {
+        Error_Handler();
+    }
+    /* USER CODE BEGIN SDIO_Init 2 */
+
+    /* USER CODE END SDIO_Init 2 */
 }
 
 /**
@@ -202,41 +233,6 @@ static void MX_SPI1_Init(void) {
 }
 
 /**
- * @brief SPI2 Initialization Function
- * @param None
- * @retval None
- */
-static void MX_SPI2_Init(void) {
-
-    /* USER CODE BEGIN SPI2_Init 0 */
-
-    /* USER CODE END SPI2_Init 0 */
-
-    /* USER CODE BEGIN SPI2_Init 1 */
-
-    /* USER CODE END SPI2_Init 1 */
-    /* SPI2 parameter configuration*/
-    hspi2.Instance = SPI2;
-    hspi2.Init.Mode = SPI_MODE_MASTER;
-    hspi2.Init.Direction = SPI_DIRECTION_2LINES;
-    hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
-    hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
-    hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
-    hspi2.Init.NSS = SPI_NSS_SOFT;
-    hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
-    hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
-    hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
-    hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-    hspi2.Init.CRCPolynomial = 10;
-    if (HAL_SPI_Init(&hspi2) != HAL_OK) {
-        Error_Handler();
-    }
-    /* USER CODE BEGIN SPI2_Init 2 */
-
-    /* USER CODE END SPI2_Init 2 */
-}
-
-/**
  * @brief GPIO Initialization Function
  * @param None
  * @retval None
@@ -252,25 +248,24 @@ static void MX_GPIO_Init(void) {
     __HAL_RCC_GPIOB_CLK_ENABLE();
 
     /*Configure GPIO pin Output Level */
-    HAL_GPIO_WritePin(GPIOA, LCD_RST_Pin | LCD_DC_Pin | LCD_CS_Pin,
-                      GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOA, LCD_RST_Pin | LCD_DC_Pin, GPIO_PIN_RESET);
 
     /*Configure GPIO pin Output Level */
-    HAL_GPIO_WritePin(SD_CS_GPIO_Port, SD_CS_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, LCD_CS_Pin | SD_CS_Pin, GPIO_PIN_RESET);
 
-    /*Configure GPIO pins : LCD_RST_Pin LCD_DC_Pin LCD_CS_Pin */
-    GPIO_InitStruct.Pin = LCD_RST_Pin | LCD_DC_Pin | LCD_CS_Pin;
+    /*Configure GPIO pins : LCD_RST_Pin LCD_DC_Pin */
+    GPIO_InitStruct.Pin = LCD_RST_Pin | LCD_DC_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /*Configure GPIO pin : SD_CS_Pin */
-    GPIO_InitStruct.Pin = SD_CS_Pin;
+    /*Configure GPIO pins : LCD_CS_Pin SD_CS_Pin */
+    GPIO_InitStruct.Pin = LCD_CS_Pin | SD_CS_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(SD_CS_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     /* USER CODE BEGIN MX_GPIO_Init_2 */
 
