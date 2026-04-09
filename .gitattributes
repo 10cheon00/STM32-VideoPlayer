@@ -1,0 +1,6 @@
+# Normalize text files in this CubeMX-generated project to CRLF so
+# regenerating on macOS does not create line-ending-only diffs.
+* text=auto eol=lf
+
+# Binary assets must not be line-normalized.
+*.pdf -text

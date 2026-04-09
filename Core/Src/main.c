@@ -102,7 +102,7 @@ int main(void) {
     MX_SPI1_Init();
     MX_FATFS_Init();
     MX_LIBJPEG_Init();
-    //   MX_SDIO_SD_Init();
+    MX_SDIO_SD_Init();
     /* USER CODE BEGIN 2 */
     st7789_init_handle(&st7789_handle, &hspi1, LCD_CS_GPIO_Port,
                        LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, GPIOA, GPIOA,
@@ -186,12 +186,6 @@ static void MX_SDIO_SD_Init(void) {
     hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
     hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
     hsd.Init.ClockDiv = 0;
-    if (HAL_SD_Init(&hsd) != HAL_OK) {
-        Error_Handler();
-    }
-    if (HAL_SD_ConfigWideBusOperation(&hsd, SDIO_BUS_WIDE_4B) != HAL_OK) {
-        Error_Handler();
-    }
     /* USER CODE BEGIN SDIO_Init 2 */
 
     /* USER CODE END SDIO_Init 2 */
@@ -251,7 +245,7 @@ static void MX_GPIO_Init(void) {
     HAL_GPIO_WritePin(GPIOA, LCD_RST_Pin | LCD_DC_Pin, GPIO_PIN_RESET);
 
     /*Configure GPIO pin Output Level */
-    HAL_GPIO_WritePin(GPIOB, LCD_CS_Pin | SD_CS_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_RESET);
 
     /*Configure GPIO pins : LCD_RST_Pin LCD_DC_Pin */
     GPIO_InitStruct.Pin = LCD_RST_Pin | LCD_DC_Pin;
@@ -260,12 +254,18 @@ static void MX_GPIO_Init(void) {
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /*Configure GPIO pins : LCD_CS_Pin SD_CS_Pin */
-    GPIO_InitStruct.Pin = LCD_CS_Pin | SD_CS_Pin;
+    /*Configure GPIO pin : LCD_CS_Pin */
+    GPIO_InitStruct.Pin = LCD_CS_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    HAL_GPIO_Init(LCD_CS_GPIO_Port, &GPIO_InitStruct);
+
+    /*Configure GPIO pin : SDIO_Detect_Pin */
+    GPIO_InitStruct.Pin = SDIO_Detect_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(SDIO_Detect_GPIO_Port, &GPIO_InitStruct);
 
     /* USER CODE BEGIN MX_GPIO_Init_2 */
 
