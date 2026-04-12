@@ -110,6 +110,21 @@ int main(void) {
                        GPIO_PIN_7);
     st7789_init_display(&st7789_handle);
     st7789_print_sample_display(&st7789_handle);
+
+    HAL_Delay(100);
+
+    FRESULT fresult = f_mount(&SDFatFS, SDPath, 1);
+
+    if (fresult == FR_OK) {
+        fresult = f_open(&SDFile, "0:/output.rgb565", FA_READ);
+    } else {
+        f_close(&SDFile);
+        Error_Handler();
+    }
+
+    uint16_t frame_line_buffer[240], sx, sy, ex, ey;
+    UINT read_size;
+    st7789_status_t st7789_status;
     /* USER CODE END 2 */
 
     /* Infinite loop */
@@ -118,7 +133,25 @@ int main(void) {
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
+        sx = 0;
+        sy = 0;
+        ex = 240;
+        ey = 240;
+        while (sy < ey) {
+            fresult = f_read(&SDFile, frame_line_buffer,
+                                   sizeof(frame_line_buffer), &read_size);
+            if (fresult == FR_OK) {
+                st7789_status = st7789_print_pixels_with_range(
+                    &st7789_handle, frame_line_buffer, sizeof(uint16_t), sx, sy,
+                    ex, sy + 1);
+            } else {
+                break;
+            }
+            sy++;
+        }
+        // HAL_Delay(100);
     }
+    f_close(&SDFile);
     /* USER CODE END 3 */
 }
 
@@ -282,7 +315,8 @@ static void MX_GPIO_Init(void) {
  */
 void Error_Handler(void) {
     /* USER CODE BEGIN Error_Handler_Debug */
-    /* User can add his own implementation to report the HAL error return state
+    /* User can add his own implementation to report the HAL error return
+     * state
      */
     __disable_irq();
     while (1) {

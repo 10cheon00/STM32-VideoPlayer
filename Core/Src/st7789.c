@@ -245,3 +245,13 @@ st7789_status_t st7789_print_sample_display(st7789_handle_t *handle) {
     }
     return STATUS_OK;
 }
+
+st7789_status_t st7789_print_pixels_with_range(st7789_handle_t *handle,
+                                              void *buffer,
+                                              uint32_t buffer_size, uint16_t sx,
+                                              uint16_t sy, uint16_t ex,
+                                              uint16_t ey) {
+    st7789_status_t status =
+        st7789_send_image(handle, (st7789_rgb565_t *)buffer, sx, sy, ex, ey);
+    return status;
+}
