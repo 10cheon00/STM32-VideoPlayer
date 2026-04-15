@@ -45,11 +45,18 @@ typedef enum {
 
 #define NO_PARAMETER 0
 
+#define IS_SPI_DMA_ENABLED(hspi) (hspi->hdmatx != NULL)
+
 static st7789_status_t st7789_send_command(st7789_handle_t *handle,
                                            uint8_t command, uint8_t *parameters,
                                            uint16_t parameter_length) {
     st7789_status_t status = STATUS_OK;
     HAL_StatusTypeDef hal_status = HAL_OK;
+
+    // spi가 dma를 사용해 전송했다면, 직전 전송이 끝나지 않았을 수 있으므로,
+    // 완료될 때까지 기다림
+    while (HAL_SPI_GetState(handle->hspi) != HAL_SPI_STATE_READY)
+        ;
 
     // 모듈에게 데이터를 전송할 것이므로 CS를 low로 설정함.
     HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS,
@@ -70,19 +77,45 @@ static st7789_status_t st7789_send_command(st7789_handle_t *handle,
         HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
                           GPIO_PIN_SET);
 
-        hal_status = HAL_SPI_Transmit(handle->hspi, parameters,
-                                      parameter_length, TIMEOUT_MS);
-        if (hal_status != HAL_OK) {
-            status = STATUS_TRANSMIT_FAILED;
+        if (handle->is_dma_enabled) {
+            // spi가 dma를 지원하면 dma 방식으로 전송 후,
+            // 등록된 콜백함수에 의해 명령어 전송을 끝냄
+            hal_status = HAL_SPI_Transmit_DMA(handle->hspi, parameters,
+                                              parameter_length);
+            if (hal_status != HAL_OK) {
+                status = STATUS_TRANSMIT_FAILED;
+            }
+        } else {
+            // spi가 dma를 지원하지 않는다면 폴링으로 전송 후 명령어 전송을 끝냄
+            hal_status = HAL_SPI_Transmit(handle->hspi, parameters,
+                                          parameter_length, TIMEOUT_MS);
+            if (hal_status != HAL_OK) {
+                status = STATUS_TRANSMIT_FAILED;
+            }
+            // 전송이 끝난 후에는 DC, CS핀을 초기화함
+            HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS,
+                              GPIO_PIN_SET);
+            HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
+                              GPIO_PIN_RESET);
         }
+    } else {
+        // 전송이 끝난 후에는 DC, CS핀을 초기화함
+        HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS,
+                          GPIO_PIN_SET);
+        HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
+                          GPIO_PIN_RESET);
     }
 
-    // 전송이 끝난 후에는 DC, CS핀을 초기화함
+    return status;
+}
+
+st7789_status_t st7789_dma_tx_cplt_callback(st7789_handle_t *handle) {
+    // 파라미터 전송을 위해 사용했던 DMA 전송이 끝난 후에는 DC, CS핀을 초기화함
     HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS, GPIO_PIN_SET);
     HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
                       GPIO_PIN_RESET);
 
-    return status;
+    return STATUS_OK;
 }
 
 static st7789_status_t st7789_send_image(st7789_handle_t *handle,
@@ -136,7 +169,8 @@ st7789_init_handle(st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
                    GPIO_TypeDef *GPIO_Port_RST, GPIO_TypeDef *GPIO_Port_SCL,
                    GPIO_TypeDef *GPIO_Port_SDA, uint16_t GPIO_Pin_CS,
                    uint16_t GPIO_Pin_DC, uint16_t GPIO_Pin_RST,
-                   uint16_t GPIO_Pin_SCL, uint16_t GPIO_Pin_SDA) {
+                   uint16_t GPIO_Pin_SCL, uint16_t GPIO_Pin_SDA,
+                   uint8_t enable_dma) {
     handle->hspi = hspi;
     handle->GPIO_Port_CS = GPIO_Port_CS;
     handle->GPIO_Port_DC = GPIO_Port_DC;
@@ -148,6 +182,11 @@ st7789_init_handle(st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
     handle->GPIO_Pin_RST = GPIO_Pin_RST;
     handle->GPIO_Pin_SCL = GPIO_Pin_SCL;
     handle->GPIO_Pin_SDA = GPIO_Pin_SDA;
+
+    if (enable_dma && IS_SPI_DMA_ENABLED(handle->hspi)) {
+        handle->is_dma_enabled = 1;
+    }
+
     return STATUS_OK;
 }
 
@@ -247,10 +286,10 @@ st7789_status_t st7789_print_sample_display(st7789_handle_t *handle) {
 }
 
 st7789_status_t st7789_print_pixels_with_range(st7789_handle_t *handle,
-                                              void *buffer,
-                                              uint32_t buffer_size, uint16_t sx,
-                                              uint16_t sy, uint16_t ex,
-                                              uint16_t ey) {
+                                               void *buffer,
+                                               uint32_t buffer_size,
+                                               uint16_t sx, uint16_t sy,
+                                               uint16_t ex, uint16_t ey) {
     st7789_status_t status =
         st7789_send_image(handle, (st7789_rgb565_t *)buffer, sx, sy, ex, ey);
     return status;
