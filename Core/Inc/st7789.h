@@ -72,7 +72,6 @@ st7789_status_t st7789_print_sample_display(st7789_handle_t *handle);
 
 st7789_status_t st7789_print_pixels_with_range(st7789_handle_t *handle,
                                                void *buffer,
-                                               uint32_t buffer_size,
                                                uint16_t sx, uint16_t sy,
                                                uint16_t ex, uint16_t ey);
 
