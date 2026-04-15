@@ -48,6 +48,7 @@
 SD_HandleTypeDef hsd;
 
 SPI_HandleTypeDef hspi1;
+DMA_HandleTypeDef hdma_spi1_tx;
 
 /* USER CODE BEGIN PV */
 
@@ -58,6 +59,7 @@ st7789_handle_t st7789_handle;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SDIO_SD_Init(void);
 /* USER CODE BEGIN PFP */
@@ -99,15 +101,17 @@ int main(void) {
 
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
+    MX_DMA_Init();
     MX_SPI1_Init();
     MX_FATFS_Init();
     MX_LIBJPEG_Init();
     MX_SDIO_SD_Init();
+    MX_FATFS_Init();
     /* USER CODE BEGIN 2 */
     st7789_init_handle(&st7789_handle, &hspi1, LCD_CS_GPIO_Port,
                        LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, GPIOA, GPIOA,
                        LCD_CS_Pin, LCD_DC_Pin, LCD_RST_Pin, GPIO_PIN_5,
-                       GPIO_PIN_7);
+                       GPIO_PIN_7, 1);
     st7789_init_display(&st7789_handle);
     st7789_print_sample_display(&st7789_handle);
 
@@ -139,11 +143,10 @@ int main(void) {
         ey = 240;
         while (sy < ey) {
             fresult = f_read(&SDFile, frame_line_buffer,
-                                   sizeof(frame_line_buffer), &read_size);
+                             sizeof(frame_line_buffer), &read_size);
             if (fresult == FR_OK) {
                 st7789_status = st7789_print_pixels_with_range(
-                    &st7789_handle, frame_line_buffer, sizeof(uint16_t), sx, sy,
-                    ex, sy + 1);
+                    &st7789_handle, frame_line_buffer, sx, sy, ex, sy + 1);
             } else {
                 break;
             }
@@ -257,6 +260,20 @@ static void MX_SPI1_Init(void) {
     /* USER CODE BEGIN SPI1_Init 2 */
 
     /* USER CODE END SPI1_Init 2 */
+}
+
+/**
+ * Enable DMA controller clock
+ */
+static void MX_DMA_Init(void) {
+
+    /* DMA controller clock enable */
+    __HAL_RCC_DMA2_CLK_ENABLE();
+
+    /* DMA interrupt init */
+    /* DMA2_Stream2_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
 }
 
 /**
