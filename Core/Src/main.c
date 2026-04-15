@@ -25,6 +25,7 @@
 #include "stm32f4xx_hal.h"
 
 #include "st7789.h"
+#include "video_reader.h"
 
 /* USER CODE END Includes */
 
@@ -52,7 +53,9 @@ DMA_HandleTypeDef hdma_spi1_tx;
 /* USER CODE BEGIN PV */
 
 st7789_handle_t st7789_handle;
-static uint16_t frame_line_buffer[240 * 16 * 2];
+video_context_t video_context;
+video_context_status_t video_context_status;
+// static uint16_t frame_line_buffer[240 * 16 * 2];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -114,66 +117,57 @@ int main(void) {
 
     HAL_Delay(100);
 
-    FRESULT fresult = f_mount(&SDFatFS, SDPath, 1);
+    video_context_init(&video_context, &SDFatFS);
 
-    if (fresult == FR_OK) {
-        fresult = f_open(&SDFile, "0:/output.rgb565", FA_READ);
-        if (fresult != FR_OK) {
-            f_close(&SDFile);
-            Error_Handler();
-        }
-    } else {
-        f_close(&SDFile);
-        Error_Handler();
+    video_context_status = VIDEO_CONTEXT_STATUS_OK;
+    if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+        video_context_status = video_reader_mount(&video_context, SDPath);
     }
 
-    uint16_t *buffer, sx, sy, ex, ey, chunk_size = 16, toggle = 1;
-    uint16_t buffer_offset = 240 * chunk_size;
-    UINT read_size;
-    st7789_status_t st7789_status;
-    uint32_t tick = 0, last_tick = HAL_GetTick(), tick_gap = 0, frame_per_milliseconds = 0;
+    if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+        video_context_status =
+            video_reader_open_file(&video_context, "0:/output.rgb565");
+    }
+
+    // TODO: 초기화 단계에서 오류가 발생했음에 대한 에러 핸들링 코드 구현
+
     /* USER CODE END 2 */
 
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
+    uint16_t sy = 0, ey = 240;
     while (1) {
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
-        sx = 0;
         sy = 0;
-        ex = 240;
-        ey = 240;
         while (sy < ey) {
+            // TODO: DMA 대기를 main.c에서 하지말고, st7789 내에서 하도록 수정
             while (HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY)
                 ;
-            if (toggle) {
-                buffer = frame_line_buffer;
-            } else {
-                buffer = frame_line_buffer + buffer_offset;
-            }
-            toggle = !toggle;
-            fresult = f_read(&SDFile, buffer, sizeof(*buffer) * buffer_offset,
-                             &read_size);
-            if (fresult == FR_OK) {
-                st7789_status = st7789_print_pixels_with_range(
-                    &st7789_handle, buffer, sx, sy, ex, sy + chunk_size);
-            } else {
-                break;
-            }
-            sy += chunk_size;
-        }
-        // 프레임레이트 계산
-        // 1초동안 보낸 프레임 개수...는 정수 단위임
-        // 프레임 시간차 : 1 = 1000 : 프레임 레이트
-        // 프레임 레이트 * 1000 = 1000000 / 프레임 시간차
-        tick = HAL_GetTick();
-        tick_gap = tick - last_tick;
-        last_tick = tick;
-        if (tick_gap != 0) {
 
-            frame_per_milliseconds = 1000000 / tick_gap;
+            if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+                video_context_status = video_reader_read_file(&video_context);
+            }
+
+            if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+                st7789_print_pixels_with_range(&st7789_handle,
+                                               video_context.buffer, 0, sy, 240,
+                                               sy + VIDEO_CONTEXT_CHUNK_OFFSET);
+            }
+            sy += VIDEO_CONTEXT_CHUNK_OFFSET;
         }
+        // // 프레임레이트 계산
+        // // 1초동안 보낸 프레임 개수...는 정수 단위임
+        // // 프레임 시간차 : 1 = 1000 : 프레임 레이트
+        // // 프레임 레이트 * 1000 = 1000000 / 프레임 시간차
+        // tick = HAL_GetTick();
+        // tick_gap = tick - last_tick;
+        // last_tick = tick;
+        // if (tick_gap != 0) {
+
+        //     frame_per_milliseconds = 1000000 / tick_gap;
+        // }
     }
     f_close(&SDFile);
     /* USER CODE END 3 */
