@@ -131,6 +131,7 @@ int main(void) {
     uint16_t buffer_offset = 240 * chunk_size;
     UINT read_size;
     st7789_status_t st7789_status;
+    uint32_t tick = 0, last_tick = HAL_GetTick(), tick_gap = 0, frame_per_milliseconds = 0;
     /* USER CODE END 2 */
 
     /* Infinite loop */
@@ -162,7 +163,17 @@ int main(void) {
             }
             sy += chunk_size;
         }
-        // HAL_Delay(100);
+        // 프레임레이트 계산
+        // 1초동안 보낸 프레임 개수...는 정수 단위임
+        // 프레임 시간차 : 1 = 1000 : 프레임 레이트
+        // 프레임 레이트 * 1000 = 1000000 / 프레임 시간차
+        tick = HAL_GetTick();
+        tick_gap = tick - last_tick;
+        last_tick = tick;
+        if (tick_gap != 0) {
+
+            frame_per_milliseconds = 1000000 / tick_gap;
+        }
     }
     f_close(&SDFile);
     /* USER CODE END 3 */
