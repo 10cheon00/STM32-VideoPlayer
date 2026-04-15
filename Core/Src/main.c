@@ -118,6 +118,10 @@ int main(void) {
 
     if (fresult == FR_OK) {
         fresult = f_open(&SDFile, "0:/output.rgb565", FA_READ);
+        if (fresult != FR_OK) {
+            f_close(&SDFile);
+            Error_Handler();
+        }
     } else {
         f_close(&SDFile);
         Error_Handler();
