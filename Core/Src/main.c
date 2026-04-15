@@ -52,7 +52,7 @@ DMA_HandleTypeDef hdma_spi1_tx;
 /* USER CODE BEGIN PV */
 
 st7789_handle_t st7789_handle;
-
+static uint16_t frame_line_buffer[240 * 16 * 2];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -127,7 +127,8 @@ int main(void) {
         Error_Handler();
     }
 
-    uint16_t frame_line_buffer[240], sx, sy, ex, ey;
+    uint16_t *buffer, sx, sy, ex, ey, chunk_size = 16, toggle = 1;
+    uint16_t buffer_offset = 240 * chunk_size;
     UINT read_size;
     st7789_status_t st7789_status;
     /* USER CODE END 2 */
@@ -143,15 +144,23 @@ int main(void) {
         ex = 240;
         ey = 240;
         while (sy < ey) {
-            fresult = f_read(&SDFile, frame_line_buffer,
-                             sizeof(frame_line_buffer), &read_size);
+            while (HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY)
+                ;
+            if (toggle) {
+                buffer = frame_line_buffer;
+            } else {
+                buffer = frame_line_buffer + buffer_offset;
+            }
+            toggle = !toggle;
+            fresult = f_read(&SDFile, buffer, sizeof(*buffer) * buffer_offset,
+                             &read_size);
             if (fresult == FR_OK) {
                 st7789_status = st7789_print_pixels_with_range(
-                    &st7789_handle, frame_line_buffer, sx, sy, ex, sy + 1);
+                    &st7789_handle, buffer, sx, sy, ex, sy + chunk_size);
             } else {
                 break;
             }
-            sy++;
+            sy += chunk_size;
         }
         // HAL_Delay(100);
     }
