@@ -47,6 +47,10 @@ typedef enum {
 
 #define IS_SPI_DMA_ENABLED(hspi) (hspi->hdmatx != NULL)
 
+static uint16_t min(uint16_t a, uint16_t b) { return a > b ? b : a; }
+
+static uint16_t max(uint16_t a, uint16_t b) { return a > b ? a : b; }
+
 static st7789_status_t st7789_send_command(st7789_handle_t *handle,
                                            uint8_t command, uint8_t *parameters,
                                            uint16_t parameter_length) {
@@ -286,9 +290,15 @@ st7789_status_t st7789_print_sample_display(st7789_handle_t *handle) {
 }
 
 st7789_status_t st7789_print_pixels_with_range(st7789_handle_t *handle,
-                                               void *buffer,
-                                               uint16_t sx, uint16_t sy,
-                                               uint16_t ex, uint16_t ey) {
+                                               void *buffer, uint16_t sx,
+                                               uint16_t sy, uint16_t ex,
+                                               uint16_t ey) {
+
+    sx = min(max(0, sx), 240);
+    sy = min(max(0, sy), 240);
+    ex = min(max(sx, ex), 240);
+    ey = min(max(sy, ey), 240);
+
     st7789_status_t status =
         st7789_send_image(handle, (st7789_rgb565_t *)buffer, sx, sy, ex, ey);
     return status;
