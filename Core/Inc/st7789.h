@@ -26,6 +26,7 @@ typedef struct {
     uint16_t GPIO_Pin_SCL;
     uint16_t GPIO_Pin_SDA;
     uint8_t is_dma_enabled;
+    uint8_t is_dma_tx_done;
 } st7789_handle_t;
 
 typedef uint16_t st7789_rgb565_t;

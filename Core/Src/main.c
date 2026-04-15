@@ -53,9 +53,9 @@ DMA_HandleTypeDef hdma_spi1_tx;
 /* USER CODE BEGIN PV */
 
 st7789_handle_t st7789_handle;
+st7789_status_t st7789_status;
 video_context_t video_context;
 video_context_status_t video_context_status;
-// static uint16_t frame_line_buffer[240 * 16 * 2];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,6 +65,11 @@ static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SDIO_SD_Init(void);
 /* USER CODE BEGIN PFP */
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
+    if (hspi->Instance == SPI1) {
+        st7789_dma_tx_cplt_callback(&st7789_handle);
+    }
+}
 
 /* USER CODE END PFP */
 
@@ -136,38 +141,32 @@ int main(void) {
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
     uint16_t sy = 0, ey = 240;
+    st7789_status = STATUS_OK;
     while (1) {
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
         sy = 0;
         while (sy < ey) {
-            // TODO: DMA 대기를 main.c에서 하지말고, st7789 내에서 하도록 수정
-            while (HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY)
+            // TODO: DMA가 완료될 때까지 대기해야하는 이유를 주석으로 제시하고,
+            //       main.c에서 호출할 수 있도록 함수로 제공
+            while (!st7789_handle.is_dma_tx_done)
                 ;
 
-            if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+            if (st7789_status == STATUS_OK) {
                 video_context_status = video_reader_read_file(&video_context);
             }
 
             if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-                st7789_print_pixels_with_range(&st7789_handle,
-                                               video_context.buffer, 0, sy, 240,
-                                               sy + VIDEO_CONTEXT_CHUNK_OFFSET);
+                st7789_status = st7789_print_pixels_with_range(
+                    &st7789_handle, video_context.buffer, 0, sy, 240,
+                    sy + VIDEO_CONTEXT_CHUNK_OFFSET);
+            } else {
+                break;
             }
             sy += VIDEO_CONTEXT_CHUNK_OFFSET;
         }
-        // // 프레임레이트 계산
-        // // 1초동안 보낸 프레임 개수...는 정수 단위임
-        // // 프레임 시간차 : 1 = 1000 : 프레임 레이트
-        // // 프레임 레이트 * 1000 = 1000000 / 프레임 시간차
-        // tick = HAL_GetTick();
-        // tick_gap = tick - last_tick;
-        // last_tick = tick;
-        // if (tick_gap != 0) {
-
-        //     frame_per_milliseconds = 1000000 / tick_gap;
-        // }
+        video_context_calculate_frame_per_milliseconds(&video_context);
     }
     f_close(&SDFile);
     /* USER CODE END 3 */
@@ -235,7 +234,7 @@ static void MX_SDIO_SD_Init(void) {
     hsd.Init.ClockBypass = SDIO_CLOCK_BYPASS_DISABLE;
     hsd.Init.ClockPowerSave = SDIO_CLOCK_POWER_SAVE_DISABLE;
     hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
-    hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_ENABLE;
+    hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
     hsd.Init.ClockDiv = 4;
     /* USER CODE BEGIN SDIO_Init 2 */
 

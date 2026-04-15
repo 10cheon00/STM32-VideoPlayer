@@ -9,11 +9,8 @@ typedef uint16_t video_buffer_t;
 
 #define VIDEO_CONTEXT_LINE_LENGTH 240
 #define VIDEO_CONTEXT_CHUNK_OFFSET 16
-#define VIDEO_CONTEXT_BUFFER_OFFSET                                            \
+#define VIDEO_CONTEXT_BUFFER_SIZE                                            \
     (VIDEO_CONTEXT_LINE_LENGTH * VIDEO_CONTEXT_CHUNK_OFFSET)
-#define VIDEO_CONTEXT_BUFFER_SIZE                                              \
-    (VIDEO_CONTEXT_LINE_LENGTH * VIDEO_CONTEXT_CHUNK_OFFSET *                  \
-     sizeof(video_buffer_t))
 
 typedef enum {
     VIDEO_CONTEXT_STATUS_OK = 0,
@@ -26,14 +23,17 @@ typedef enum {
 typedef struct {
     FATFS *sd_fatfs;
     FIL file;
-    video_buffer_t double_buffer[VIDEO_CONTEXT_BUFFER_SIZE];
-    uint16_t *buffer;
-    uint8_t use_front_buffer;
+    video_buffer_t *buffer;
+    uint8_t use_buffer_a;
     UINT read_size;
     uint32_t frame_per_milliseconds;
     uint32_t last_tick;
 } video_context_t;
 
 void video_context_init(video_context_t *context, FATFS *sd_fatfs);
+
+void video_context_switch_buffer_address(video_context_t *context);
+
+void video_context_calculate_frame_per_milliseconds(video_context_t *context);
 
 #endif

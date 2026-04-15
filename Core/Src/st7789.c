@@ -57,11 +57,6 @@ static st7789_status_t st7789_send_command(st7789_handle_t *handle,
     st7789_status_t status = STATUS_OK;
     HAL_StatusTypeDef hal_status = HAL_OK;
 
-    // spi가 dma를 사용해 전송했다면, 직전 전송이 끝나지 않았을 수 있으므로,
-    // 완료될 때까지 기다림
-    while (HAL_SPI_GetState(handle->hspi) != HAL_SPI_STATE_READY)
-        ;
-
     // 모듈에게 데이터를 전송할 것이므로 CS를 low로 설정함.
     HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS,
                       GPIO_PIN_RESET);
@@ -89,6 +84,7 @@ static st7789_status_t st7789_send_command(st7789_handle_t *handle,
             if (hal_status != HAL_OK) {
                 status = STATUS_TRANSMIT_FAILED;
             }
+            handle->is_dma_tx_done = 0;
         } else {
             // spi가 dma를 지원하지 않는다면 폴링으로 전송 후 명령어 전송을 끝냄
             hal_status = HAL_SPI_Transmit(handle->hspi, parameters,
@@ -118,7 +114,7 @@ st7789_status_t st7789_dma_tx_cplt_callback(st7789_handle_t *handle) {
     HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS, GPIO_PIN_SET);
     HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
                       GPIO_PIN_RESET);
-
+    handle->is_dma_tx_done = 1;
     return STATUS_OK;
 }
 
@@ -135,14 +131,16 @@ static st7789_status_t st7789_send_image(st7789_handle_t *handle,
     };
     uint16_t image_length = (ex - sx) * (ey - sy);
 
+    // spi가 dma를 사용해 전송했다면, 직전 전송이 끝나지 않았을 수 있으므로,
+    // 완료될 때까지 기다림
+    if (handle->is_dma_enabled) {
+        while (!handle->is_dma_tx_done)
+            ;
+    }
+
     // 1. CASET 전송
-    // TODO:램에 쓰는거니까 DC를 1로 설정
     // 파라미터는 시작 주소를 먼저, 종료 주소를 나중에 전송
     status = st7789_send_command(handle, CASET, parameters, 4);
-    if (status != STATUS_OK) {
-        // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
-        // 대한 구현은 미룸
-    }
 
     // 2. RASET 전송
     // 파라미터는 시작 주소를 먼저, 종료 주소를 나중에 전송
@@ -150,21 +148,20 @@ static st7789_status_t st7789_send_image(st7789_handle_t *handle,
     parameters[1] = (uint8_t)(sy & 0x00FF);
     parameters[2] = (uint8_t)((ey & 0xFF00) >> 8);
     parameters[3] = (uint8_t)(ey & 0x00FF);
-    status = st7789_send_command(handle, RASET, parameters, 4);
-    if (status != STATUS_OK) {
-        // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
-        // 대한 구현은 미룸
+    if (status == STATUS_OK) {
+        status = st7789_send_command(handle, RASET, parameters, 4);
     }
 
     // 3. RAMWR 전송
-    status =
-        st7789_send_command(handle, RAMWR, (uint8_t *)image, 2 * image_length);
-    if (status != STATUS_OK) {
-        // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
-        // 대한 구현은 미룸
+    if (status == STATUS_OK) {
+        status = st7789_send_command(handle, RAMWR, (uint8_t *)image,
+                                     2 * image_length);
     }
 
-    return STATUS_OK;
+    // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
+    // 대한 구현은 미룸
+
+    return status;
 }
 
 st7789_status_t
@@ -189,6 +186,7 @@ st7789_init_handle(st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
 
     if (enable_dma && IS_SPI_DMA_ENABLED(handle->hspi)) {
         handle->is_dma_enabled = 1;
+        handle->is_dma_tx_done = 1;
     }
 
     return STATUS_OK;
@@ -299,7 +297,5 @@ st7789_status_t st7789_print_pixels_with_range(st7789_handle_t *handle,
     ex = min(max(sx, ex), 240);
     ey = min(max(sy, ey), 240);
 
-    st7789_status_t status =
-        st7789_send_image(handle, (st7789_rgb565_t *)buffer, sx, sy, ex, ey);
-    return status;
+    return st7789_send_image(handle, (st7789_rgb565_t *)buffer, sx, sy, ex, ey);
 }
