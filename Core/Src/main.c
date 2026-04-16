@@ -140,32 +140,32 @@ int main(void) {
 
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
-    uint16_t sy = 0, ey = 240;
     while (1) {
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
-        sy = 0;
-        while (sy < ey) {
-            if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-                video_context_wait_for_dma_and_sdio_idle(&video_context);
-            }
-
-            if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-                video_context_status = video_reader_read_file(&video_context);
-            }
-
-            if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-                video_context_status =
-                    video_player_print_video_buffer(&video_context);
-            } else {
-                break;
-            }
-            sy += VIDEO_CONTEXT_CHUNK_OFFSET;
+        if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+            video_context_wait_for_dma_and_sdio_idle(&video_context);
         }
-        video_context_calculate_frame_per_milliseconds(&video_context);
+
+        if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+            video_context_status = video_reader_read_file(&video_context);
+        }
+
+        if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+            video_context_status =
+                video_player_print_video_buffer(&video_context);
+        }
+
+        if (video_context_status != VIDEO_CONTEXT_STATUS_OK) {
+            break;
+        }
     }
-    f_close(&SDFile);
+
+    if (video_context_status != VIDEO_CONTEXT_STATUS_OK) {
+        video_reader_close_file(&video_context);
+        Error_Handler();
+    }
     /* USER CODE END 3 */
 }
 
