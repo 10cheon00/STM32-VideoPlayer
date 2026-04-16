@@ -11,18 +11,22 @@ static void video_context_calculate_next_frame_tick(video_context_t *context);
 video_context_status_t video_context_init(video_context_t *context,
                                           FATFS *sd_fatfs,
                                           SD_HandleTypeDef *hsd,
-                                          st7789_handle_t *st7789_handle) {
+                                          st7789_handle_t *st7789_handle,
+                                          uint32_t target_frame_rate) {
     context->sd_fatfs = sd_fatfs;
     context->hsd = hsd;
     context->use_buffer_a = 0;
     context->buffer = buffer_b;
-    context->last_tick = HAL_GetTick();
-    context->current_frame_rate = 0;
+
     context->st7789_handle = st7789_handle;
     context->sx = 0;
     context->sy = 0;
     context->ex = context->st7789_handle->screen_width;
     context->ey = VIDEO_CONTEXT_CHUNK_OFFSET;
+
+    context->last_tick = HAL_GetTick();
+    context->current_frame_rate = 0;
+    context->target_frame_rate = target_frame_rate;
 
     return VIDEO_CONTEXT_STATUS_OK;
 }
@@ -83,5 +87,5 @@ video_context_calculate_current_frame_rate(video_context_t *context) {
 }
 
 static void video_context_calculate_next_frame_tick(video_context_t *context) {
-    context->next_frame_tick = 0;
+    context->next_frame_tick = HAL_GetTick() + 1000U / context->target_frame_rate;
 }

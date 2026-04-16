@@ -119,7 +119,7 @@ int main(void) {
     st7789_init_display(&st7789_handle);
 
     video_context_status =
-        video_context_init(&video_context, &SDFatFS, &hsd, &st7789_handle);
+        video_context_init(&video_context, &SDFatFS, &hsd, &st7789_handle, 15);
 
     HAL_Delay(100);
 

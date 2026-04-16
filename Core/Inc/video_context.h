@@ -50,7 +50,8 @@ typedef struct {
 video_context_status_t video_context_init(video_context_t *context,
                                           FATFS *sd_fatfs,
                                           SD_HandleTypeDef *hsd,
-                                          st7789_handle_t *st7789_handle);
+                                          st7789_handle_t *st7789_handle,
+                                          uint32_t target_frame_rate);
 
 void video_context_switch_buffer_address(video_context_t *context);
 
