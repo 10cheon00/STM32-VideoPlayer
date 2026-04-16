@@ -76,7 +76,7 @@ static st7789_status_t st7789_send_command(st7789_handle_t *handle,
         HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
                           GPIO_PIN_SET);
 
-        if (handle->is_dma_enabled) {
+        if (handle->dma_status == ST7789_DMA_ENABLE) {
             // spi가 dma를 지원하면 dma 방식으로 전송 후,
             // 등록된 콜백함수에 의해 명령어 전송을 끝냄
             handle->is_dma_tx_done = 0;
@@ -133,7 +133,7 @@ static st7789_status_t st7789_send_image(st7789_handle_t *handle,
 
     // spi가 dma를 사용해 전송했다면, 직전 전송이 끝나지 않았을 수 있으므로,
     // 완료될 때까지 기다림
-    if (handle->is_dma_enabled) {
+    if (handle->dma_status == ST7789_DMA_ENABLE) {
         while (!handle->is_dma_tx_done)
             ;
     }
@@ -164,14 +164,13 @@ static st7789_status_t st7789_send_image(st7789_handle_t *handle,
     return status;
 }
 
-st7789_status_t st7789_init_handle(st7789_handle_t *handle,
-                                   SPI_HandleTypeDef *hspi,
-                                   GPIO_TypeDef *GPIO_Port_CS,
-                                   GPIO_TypeDef *GPIO_Port_DC,
-                                   GPIO_TypeDef *GPIO_Port_RST,
-                                   uint16_t GPIO_Pin_CS, uint16_t GPIO_Pin_DC,
-                                   uint16_t GPIO_Pin_RST, uint16_t screen_width,
-                                   uint16_t screen_height, uint8_t enable_dma) {
+st7789_status_t
+st7789_init_handle(st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
+                   GPIO_TypeDef *GPIO_Port_CS, GPIO_TypeDef *GPIO_Port_DC,
+                   GPIO_TypeDef *GPIO_Port_RST, uint16_t GPIO_Pin_CS,
+                   uint16_t GPIO_Pin_DC, uint16_t GPIO_Pin_RST,
+                   uint16_t screen_width, uint16_t screen_height,
+                   st7789_dma_status_t dma_status) {
     handle->hspi = hspi;
     handle->GPIO_Port_CS = GPIO_Port_CS;
     handle->GPIO_Port_DC = GPIO_Port_DC;
@@ -181,12 +180,11 @@ st7789_status_t st7789_init_handle(st7789_handle_t *handle,
     handle->GPIO_Pin_RST = GPIO_Pin_RST;
     handle->screen_width = screen_width;
     handle->screen_height = screen_height;
-
-    if (enable_dma && IS_SPI_DMA_ENABLED(handle->hspi)) {
-        handle->is_dma_enabled = 1;
+    handle->dma_status = dma_status;
+    if (handle->dma_status == ST7789_DMA_ENABLE &&
+        IS_SPI_DMA_ENABLED(handle->hspi)) {
         handle->is_dma_tx_done = 1;
     } else {
-        handle->is_dma_enabled = 0;
         handle->is_dma_tx_done = 0;
     }
 

@@ -13,6 +13,11 @@ typedef enum {
     STATUS_TRANSMIT_FAILED,
 } st7789_status_t;
 
+typedef enum {
+    ST7789_DMA_DISABLE = 0,
+    ST7789_DMA_ENABLE,
+} st7789_dma_status_t;
+
 typedef struct {
     SPI_HandleTypeDef *hspi;
     GPIO_TypeDef *GPIO_Port_CS;
@@ -21,7 +26,7 @@ typedef struct {
     uint16_t GPIO_Pin_CS;
     uint16_t GPIO_Pin_DC;
     uint16_t GPIO_Pin_RST;
-    uint8_t is_dma_enabled;
+    st7789_dma_status_t dma_status;
     uint8_t is_dma_tx_done;
     uint16_t screen_width;
     uint16_t screen_height;
@@ -63,7 +68,7 @@ st7789_status_t st7789_init_handle(st7789_handle_t *handle,
                                    GPIO_TypeDef *GPIO_Port_RST,
                                    uint16_t GPIO_Pin_CS, uint16_t GPIO_Pin_DC,
                                    uint16_t GPIO_Pin_RST, uint16_t screen_width,
-                                   uint16_t screen_height, uint8_t enable_dma);
+                                   uint16_t screen_height, st7789_dma_status_t dma_status);
 
 st7789_status_t st7789_init_display(st7789_handle_t *handle);
 

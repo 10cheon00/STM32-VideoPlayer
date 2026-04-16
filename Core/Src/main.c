@@ -115,7 +115,7 @@ int main(void) {
     /* USER CODE BEGIN 2 */
     st7789_init_handle(&st7789_handle, &hspi1, LCD_CS_GPIO_Port,
                        LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, LCD_CS_Pin,
-                       LCD_DC_Pin, LCD_RST_Pin, 240, 240, 1);
+                       LCD_DC_Pin, LCD_RST_Pin, 240, 240, ST7789_DMA_ENABLE);
     st7789_init_display(&st7789_handle);
 
     video_context_status =
