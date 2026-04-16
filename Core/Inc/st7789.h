@@ -27,6 +27,8 @@ typedef struct {
     uint16_t GPIO_Pin_SDA;
     uint8_t is_dma_enabled;
     uint8_t is_dma_tx_done;
+    uint16_t screen_width;
+    uint16_t screen_height;
 } st7789_handle_t;
 
 typedef uint16_t st7789_rgb565_t;
@@ -58,23 +60,22 @@ typedef uint16_t st7789_rgb565_t;
  *
  */
 
-st7789_status_t
-st7789_init_handle(st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
-                   GPIO_TypeDef *GPIO_Port_CS, GPIO_TypeDef *GPIO_Port_DC,
-                   GPIO_TypeDef *GPIO_Port_RST, GPIO_TypeDef *GPIO_Port_SCL,
-                   GPIO_TypeDef *GPIO_Port_SDA, uint16_t GPIO_Pin_CS,
-                   uint16_t GPIO_Pin_DC, uint16_t GPIO_Pin_RST,
-                   uint16_t GPIO_Pin_SCL, uint16_t GPIO_Pin_SDA,
-                   uint8_t enable_dma);
+st7789_status_t st7789_init_handle(
+    st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
+    GPIO_TypeDef *GPIO_Port_CS, GPIO_TypeDef *GPIO_Port_DC,
+    GPIO_TypeDef *GPIO_Port_RST, GPIO_TypeDef *GPIO_Port_SCL,
+    GPIO_TypeDef *GPIO_Port_SDA, uint16_t GPIO_Pin_CS, uint16_t GPIO_Pin_DC,
+    uint16_t GPIO_Pin_RST, uint16_t GPIO_Pin_SCL, uint16_t GPIO_Pin_SDA,
+    uint16_t screen_width, uint16_t screen_height, uint8_t enable_dma);
 
 st7789_status_t st7789_init_display(st7789_handle_t *handle);
 
 st7789_status_t st7789_print_sample_display(st7789_handle_t *handle);
 
 st7789_status_t st7789_print_pixels_with_range(st7789_handle_t *handle,
-                                               void *buffer,
-                                               uint16_t sx, uint16_t sy,
-                                               uint16_t ex, uint16_t ey);
+                                               void *buffer, uint16_t sx,
+                                               uint16_t sy, uint16_t ex,
+                                               uint16_t ey);
 
 /**
  * 이 함수는 LCD 출력용으로 사용하는 SPI가 DMA를 사용하여 전송하는 경우,

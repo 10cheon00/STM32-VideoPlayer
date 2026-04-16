@@ -164,14 +164,13 @@ static st7789_status_t st7789_send_image(st7789_handle_t *handle,
     return status;
 }
 
-st7789_status_t
-st7789_init_handle(st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
-                   GPIO_TypeDef *GPIO_Port_CS, GPIO_TypeDef *GPIO_Port_DC,
-                   GPIO_TypeDef *GPIO_Port_RST, GPIO_TypeDef *GPIO_Port_SCL,
-                   GPIO_TypeDef *GPIO_Port_SDA, uint16_t GPIO_Pin_CS,
-                   uint16_t GPIO_Pin_DC, uint16_t GPIO_Pin_RST,
-                   uint16_t GPIO_Pin_SCL, uint16_t GPIO_Pin_SDA,
-                   uint8_t enable_dma) {
+st7789_status_t st7789_init_handle(
+    st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
+    GPIO_TypeDef *GPIO_Port_CS, GPIO_TypeDef *GPIO_Port_DC,
+    GPIO_TypeDef *GPIO_Port_RST, GPIO_TypeDef *GPIO_Port_SCL,
+    GPIO_TypeDef *GPIO_Port_SDA, uint16_t GPIO_Pin_CS, uint16_t GPIO_Pin_DC,
+    uint16_t GPIO_Pin_RST, uint16_t GPIO_Pin_SCL, uint16_t GPIO_Pin_SDA,
+    uint16_t screen_width, uint16_t screen_height, uint8_t enable_dma) {
     handle->hspi = hspi;
     handle->GPIO_Port_CS = GPIO_Port_CS;
     handle->GPIO_Port_DC = GPIO_Port_DC;
@@ -183,6 +182,8 @@ st7789_init_handle(st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
     handle->GPIO_Pin_RST = GPIO_Pin_RST;
     handle->GPIO_Pin_SCL = GPIO_Pin_SCL;
     handle->GPIO_Pin_SDA = GPIO_Pin_SDA;
+    handle->screen_width = screen_width;
+    handle->screen_height = screen_height;
 
     if (enable_dma && IS_SPI_DMA_ENABLED(handle->hspi)) {
         handle->is_dma_enabled = 1;
@@ -266,26 +267,32 @@ st7789_status_t st7789_init_display(st7789_handle_t *handle) {
 
 st7789_status_t st7789_print_sample_display(st7789_handle_t *handle) {
     uint16_t image[240] = {0};
+    uint16_t sy = 0, ey = handle->screen_height / 3;
 
-    for (uint16_t y = 0; y < 80; y++) {
-        for (uint16_t i = 0; i < 240; i++) {
+    while (sy < ey) {
+        for (uint16_t i = 0; i < handle->screen_width; i++) {
             image[i] = 0x00F8;
         }
-        st7789_send_image(handle, image, 0, y, 240, y + 1);
+        st7789_send_image(handle, image, 0, sy, handle->screen_width, sy + 1);
+        sy++;
     }
 
-    for (uint16_t y = 80; y < 160; y++) {
-        for (uint16_t i = 0; i < 240; i++) {
+    ey += handle->screen_height / 3;
+    while (sy < ey) {
+        for (uint16_t i = 0; i < handle->screen_width; i++) {
             image[i] = 0xE007;
         }
-        st7789_send_image(handle, image, 0, y, 240, y + 1);
+        st7789_send_image(handle, image, 0, sy, handle->screen_width, sy + 1);
+        sy++;
     }
 
-    for (uint16_t y = 160; y < 240; y++) {
-        for (uint16_t i = 0; i < 240; i++) {
+    ey += handle->screen_height / 3;
+    while (sy < ey) {
+        for (uint16_t i = 0; i < handle->screen_width; i++) {
             image[i] = 0x1F00;
         }
-        st7789_send_image(handle, image, 0, y, 240, y + 1);
+        st7789_send_image(handle, image, 0, sy, handle->screen_width, sy + 1);
+        sy++;
     }
     return STATUS_OK;
 }
@@ -295,10 +302,10 @@ st7789_status_t st7789_print_pixels_with_range(st7789_handle_t *handle,
                                                uint16_t sy, uint16_t ex,
                                                uint16_t ey) {
 
-    sx = min(max(0, sx), 240);
-    sy = min(max(0, sy), 240);
-    ex = min(max(sx, ex), 240);
-    ey = min(max(sy, ey), 240);
+    sx = min(max(0, sx), handle->screen_width);
+    sy = min(max(0, sy), handle->screen_height);
+    ex = min(max(sx, ex), handle->screen_width);
+    ey = min(max(sy, ey), handle->screen_height);
 
     return st7789_send_image(handle, (st7789_rgb565_t *)buffer, sx, sy, ex, ey);
 }
