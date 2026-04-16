@@ -9,8 +9,8 @@
 #include "stm32f4xx_hal.h"
 
 typedef enum {
-    STATUS_OK = 0,
-    STATUS_TRANSMIT_FAILED,
+    ST7789_STATUS_OK = 0,
+    ST7789_STATUS_TRANSMIT_FAILED,
 } st7789_status_t;
 
 typedef enum {

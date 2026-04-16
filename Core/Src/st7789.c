@@ -54,7 +54,7 @@ static uint16_t max(uint16_t a, uint16_t b) { return a > b ? a : b; }
 static st7789_status_t st7789_send_command(st7789_handle_t *handle,
                                            uint8_t command, uint8_t *parameters,
                                            uint16_t parameter_length) {
-    st7789_status_t status = STATUS_OK;
+    st7789_status_t status = ST7789_STATUS_OK;
     HAL_StatusTypeDef hal_status = HAL_OK;
 
     // 모듈에게 데이터를 전송할 것이므로 CS를 low로 설정함.
@@ -67,7 +67,7 @@ static st7789_status_t st7789_send_command(st7789_handle_t *handle,
     // 인자로 받은 명령어를 전송함
     hal_status = HAL_SPI_Transmit(handle->hspi, &command, 1, TIMEOUT_MS);
     if (hal_status != HAL_OK) {
-        status = STATUS_TRANSMIT_FAILED;
+        status = ST7789_STATUS_TRANSMIT_FAILED;
     }
 
     if (parameter_length > 0) {
@@ -83,14 +83,14 @@ static st7789_status_t st7789_send_command(st7789_handle_t *handle,
             hal_status = HAL_SPI_Transmit_DMA(handle->hspi, parameters,
                                               parameter_length);
             if (hal_status != HAL_OK) {
-                status = STATUS_TRANSMIT_FAILED;
+                status = ST7789_STATUS_TRANSMIT_FAILED;
             }
         } else {
             // spi가 dma를 지원하지 않는다면 폴링으로 전송 후 명령어 전송을 끝냄
             hal_status = HAL_SPI_Transmit(handle->hspi, parameters,
                                           parameter_length, TIMEOUT_MS);
             if (hal_status != HAL_OK) {
-                status = STATUS_TRANSMIT_FAILED;
+                status = ST7789_STATUS_TRANSMIT_FAILED;
             }
             // 전송이 끝난 후에는 DC, CS핀을 초기화함
             HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS,
@@ -115,14 +115,14 @@ st7789_status_t st7789_dma_tx_cplt_callback(st7789_handle_t *handle) {
     HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
                       GPIO_PIN_RESET);
     handle->is_dma_tx_done = 1;
-    return STATUS_OK;
+    return ST7789_STATUS_OK;
 }
 
 static st7789_status_t st7789_send_image(st7789_handle_t *handle,
                                          st7789_rgb565_t *image, uint16_t sx,
                                          uint16_t sy, uint16_t ex,
                                          uint16_t ey) {
-    st7789_status_t status = STATUS_OK;
+    st7789_status_t status = ST7789_STATUS_OK;
     uint8_t parameters[4] = {
         (uint8_t)((sx & 0xFF00) >> 8),
         (uint8_t)(sx & 0x00FF),
@@ -148,12 +148,12 @@ static st7789_status_t st7789_send_image(st7789_handle_t *handle,
     parameters[1] = (uint8_t)(sy & 0x00FF);
     parameters[2] = (uint8_t)((ey & 0xFF00) >> 8);
     parameters[3] = (uint8_t)(ey & 0x00FF);
-    if (status == STATUS_OK) {
+    if (status == ST7789_STATUS_OK) {
         status = st7789_send_command(handle, RASET, parameters, 4);
     }
 
     // 3. RAMWR 전송
-    if (status == STATUS_OK) {
+    if (status == ST7789_STATUS_OK) {
         status = st7789_send_command(handle, RAMWR, (uint8_t *)image,
                                      2 * image_length);
     }
@@ -188,11 +188,11 @@ st7789_init_handle(st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
         handle->is_dma_tx_done = 0;
     }
 
-    return STATUS_OK;
+    return ST7789_STATUS_OK;
 }
 
 st7789_status_t st7789_init_display(st7789_handle_t *handle) {
-    st7789_status_t status = STATUS_OK;
+    st7789_status_t status = ST7789_STATUS_OK;
     uint8_t parameter = 0;
 
     // RST핀에 엣지를 발생시킴
@@ -204,7 +204,7 @@ st7789_status_t st7789_init_display(st7789_handle_t *handle) {
     // 1. SWRESET 전송 후, 120ms만큼 기다림
     status = st7789_send_command(handle, SWRESET, NO_PARAMETER, 0);
     HAL_Delay(WAIT_MS);
-    if (status != STATUS_OK) {
+    if (status != ST7789_STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
@@ -212,28 +212,28 @@ st7789_status_t st7789_init_display(st7789_handle_t *handle) {
     // 2. SLPOUT 전송 후, 150ms 만큼 기다림
     status = st7789_send_command(handle, SLPOUT, NO_PARAMETER, 0);
     HAL_Delay(WAIT_MS);
-    if (status != STATUS_OK) {
+    if (status != ST7789_STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
 
     // 3. NORON 전송
     status = st7789_send_command(handle, NORON, NO_PARAMETER, 0);
-    if (status != STATUS_OK) {
+    if (status != ST7789_STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
 
     // 4. INVON 전송
     status = st7789_send_command(handle, INVON, NO_PARAMETER, 0);
-    if (status != STATUS_OK) {
+    if (status != ST7789_STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
 
     // 5. DISPON 전송
     status = st7789_send_command(handle, DISPON, NO_PARAMETER, 0);
-    if (status != STATUS_OK) {
+    if (status != ST7789_STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
@@ -244,7 +244,7 @@ st7789_status_t st7789_init_display(st7789_handle_t *handle) {
         PAGE_COLUMN_ORDER_NORMAL_MODE | LINE_ADDRESS_ORDER_TOP_TO_BOTTOM |
         RGB_ORDER_RGB | DISPLAY_DATA_LATCH_ORDER_LEFT_TO_RIGHT;
     status = st7789_send_command(handle, MADCTL, &parameter, 1);
-    if (status != STATUS_OK) {
+    if (status != ST7789_STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
@@ -252,7 +252,7 @@ st7789_status_t st7789_init_display(st7789_handle_t *handle) {
     // 7. COLMOD 전송
     parameter = RGB565_INTERFACE | COLOR_FORMAT_16BIT;
     status = st7789_send_command(handle, COLMOD, &parameter, 1);
-    if (status != STATUS_OK) {
+    if (status != ST7789_STATUS_OK) {
         // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
         // 대한 구현은 미룸
     }
@@ -289,7 +289,7 @@ st7789_status_t st7789_print_sample_display(st7789_handle_t *handle) {
         st7789_send_image(handle, image, 0, sy, handle->screen_width, sy + 1);
         sy++;
     }
-    return STATUS_OK;
+    return ST7789_STATUS_OK;
 }
 
 st7789_status_t st7789_print_pixels_with_range(st7789_handle_t *handle,
