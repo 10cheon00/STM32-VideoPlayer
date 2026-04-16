@@ -32,7 +32,7 @@ typedef struct {
     video_buffer_t *buffer;
     uint8_t use_buffer_a;
     UINT read_size;
-    
+
     // 비디오 파일 재생을 위한 멤버들
     st7789_handle_t *st7789_handle;
     uint16_t sx;
@@ -41,9 +41,10 @@ typedef struct {
     uint16_t ey;
 
     // 비디오 재생에 관련된 메타 데이터들
-    uint32_t frame_per_milliseconds;
+    uint32_t current_frame_rate;
     uint32_t last_tick;
     uint32_t next_frame_tick;
+    uint32_t target_frame_rate;
 } video_context_t;
 
 video_context_status_t video_context_init(video_context_t *context,

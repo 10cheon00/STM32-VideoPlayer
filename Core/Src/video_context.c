@@ -5,7 +5,7 @@ static video_buffer_t buffer_b[VIDEO_CONTEXT_BUFFER_SIZE];
 
 static void video_context_update_video_meta_data(video_context_t *context);
 static void
-video_context_calculate_frame_per_milliseconds(video_context_t *context);
+video_context_calculate_current_frame_rate(video_context_t *context);
 static void video_context_calculate_next_frame_tick(video_context_t *context);
 
 video_context_status_t video_context_init(video_context_t *context,
@@ -17,7 +17,7 @@ video_context_status_t video_context_init(video_context_t *context,
     context->use_buffer_a = 0;
     context->buffer = buffer_b;
     context->last_tick = HAL_GetTick();
-    context->frame_per_milliseconds = 0;
+    context->current_frame_rate = 0;
     context->st7789_handle = st7789_handle;
     context->sx = 0;
     context->sy = 0;
@@ -63,12 +63,12 @@ void video_context_step_next_range(video_context_t *context) {
 }
 
 void video_context_update_video_meta_data(video_context_t *context) {
-    video_context_calculate_frame_per_milliseconds(context);
+    video_context_calculate_current_frame_rate(context);
     video_context_calculate_next_frame_tick(context);
 }
 
 static void
-video_context_calculate_frame_per_milliseconds(video_context_t *context) {
+video_context_calculate_current_frame_rate(video_context_t *context) {
     // 프레임레이트 계산
     // 1초동안 보낸 프레임 개수...는 정수 단위임
     // 프레임 시간차 : 1 = 1000 : 프레임 레이트
@@ -78,7 +78,7 @@ video_context_calculate_frame_per_milliseconds(video_context_t *context) {
 
     context->last_tick = tick;
     if (tick_diff > 0) {
-        context->frame_per_milliseconds = 1000000U / tick_diff;
+        context->current_frame_rate = 1000000U / tick_diff;
     }
 }
 
