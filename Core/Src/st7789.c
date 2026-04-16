@@ -45,6 +45,12 @@ typedef enum {
 
 #define NO_PARAMETER 0
 
+#define IS_SPI_DMA_ENABLED(hspi) (hspi->hdmatx != NULL)
+
+static uint16_t min(uint16_t a, uint16_t b) { return a > b ? b : a; }
+
+static uint16_t max(uint16_t a, uint16_t b) { return a > b ? a : b; }
+
 static st7789_status_t st7789_send_command(st7789_handle_t *handle,
                                            uint8_t command, uint8_t *parameters,
                                            uint16_t parameter_length) {
@@ -70,19 +76,46 @@ static st7789_status_t st7789_send_command(st7789_handle_t *handle,
         HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
                           GPIO_PIN_SET);
 
-        hal_status = HAL_SPI_Transmit(handle->hspi, parameters,
-                                      parameter_length, TIMEOUT_MS);
-        if (hal_status != HAL_OK) {
-            status = STATUS_TRANSMIT_FAILED;
+        if (handle->is_dma_enabled) {
+            // spi가 dma를 지원하면 dma 방식으로 전송 후,
+            // 등록된 콜백함수에 의해 명령어 전송을 끝냄
+            hal_status = HAL_SPI_Transmit_DMA(handle->hspi, parameters,
+                                              parameter_length);
+            if (hal_status != HAL_OK) {
+                status = STATUS_TRANSMIT_FAILED;
+            }
+            handle->is_dma_tx_done = 0;
+        } else {
+            // spi가 dma를 지원하지 않는다면 폴링으로 전송 후 명령어 전송을 끝냄
+            hal_status = HAL_SPI_Transmit(handle->hspi, parameters,
+                                          parameter_length, TIMEOUT_MS);
+            if (hal_status != HAL_OK) {
+                status = STATUS_TRANSMIT_FAILED;
+            }
+            // 전송이 끝난 후에는 DC, CS핀을 초기화함
+            HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS,
+                              GPIO_PIN_SET);
+            HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
+                              GPIO_PIN_RESET);
         }
+    } else {
+        // 전송이 끝난 후에는 DC, CS핀을 초기화함
+        HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS,
+                          GPIO_PIN_SET);
+        HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
+                          GPIO_PIN_RESET);
     }
 
-    // 전송이 끝난 후에는 DC, CS핀을 초기화함
+    return status;
+}
+
+st7789_status_t st7789_dma_tx_cplt_callback(st7789_handle_t *handle) {
+    // 파라미터 전송을 위해 사용했던 DMA 전송이 끝난 후에는 DC, CS핀을 초기화함
     HAL_GPIO_WritePin(handle->GPIO_Port_CS, handle->GPIO_Pin_CS, GPIO_PIN_SET);
     HAL_GPIO_WritePin(handle->GPIO_Port_DC, handle->GPIO_Pin_DC,
                       GPIO_PIN_RESET);
-
-    return status;
+    handle->is_dma_tx_done = 1;
+    return STATUS_OK;
 }
 
 static st7789_status_t st7789_send_image(st7789_handle_t *handle,
@@ -98,14 +131,16 @@ static st7789_status_t st7789_send_image(st7789_handle_t *handle,
     };
     uint16_t image_length = (ex - sx) * (ey - sy);
 
+    // spi가 dma를 사용해 전송했다면, 직전 전송이 끝나지 않았을 수 있으므로,
+    // 완료될 때까지 기다림
+    if (handle->is_dma_enabled) {
+        while (!handle->is_dma_tx_done)
+            ;
+    }
+
     // 1. CASET 전송
-    // TODO:램에 쓰는거니까 DC를 1로 설정
     // 파라미터는 시작 주소를 먼저, 종료 주소를 나중에 전송
     status = st7789_send_command(handle, CASET, parameters, 4);
-    if (status != STATUS_OK) {
-        // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
-        // 대한 구현은 미룸
-    }
 
     // 2. RASET 전송
     // 파라미터는 시작 주소를 먼저, 종료 주소를 나중에 전송
@@ -113,21 +148,20 @@ static st7789_status_t st7789_send_image(st7789_handle_t *handle,
     parameters[1] = (uint8_t)(sy & 0x00FF);
     parameters[2] = (uint8_t)((ey & 0xFF00) >> 8);
     parameters[3] = (uint8_t)(ey & 0x00FF);
-    status = st7789_send_command(handle, RASET, parameters, 4);
-    if (status != STATUS_OK) {
-        // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
-        // 대한 구현은 미룸
+    if (status == STATUS_OK) {
+        status = st7789_send_command(handle, RASET, parameters, 4);
     }
 
     // 3. RAMWR 전송
-    status =
-        st7789_send_command(handle, RAMWR, (uint8_t *)image, 2 * image_length);
-    if (status != STATUS_OK) {
-        // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
-        // 대한 구현은 미룸
+    if (status == STATUS_OK) {
+        status = st7789_send_command(handle, RAMWR, (uint8_t *)image,
+                                     2 * image_length);
     }
 
-    return STATUS_OK;
+    // TODO: st7789 라이브러리의 오류에 대한 문서가 없으므로 예외 처리에
+    // 대한 구현은 미룸
+
+    return status;
 }
 
 st7789_status_t
@@ -136,7 +170,8 @@ st7789_init_handle(st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
                    GPIO_TypeDef *GPIO_Port_RST, GPIO_TypeDef *GPIO_Port_SCL,
                    GPIO_TypeDef *GPIO_Port_SDA, uint16_t GPIO_Pin_CS,
                    uint16_t GPIO_Pin_DC, uint16_t GPIO_Pin_RST,
-                   uint16_t GPIO_Pin_SCL, uint16_t GPIO_Pin_SDA) {
+                   uint16_t GPIO_Pin_SCL, uint16_t GPIO_Pin_SDA,
+                   uint8_t enable_dma) {
     handle->hspi = hspi;
     handle->GPIO_Port_CS = GPIO_Port_CS;
     handle->GPIO_Port_DC = GPIO_Port_DC;
@@ -148,6 +183,12 @@ st7789_init_handle(st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
     handle->GPIO_Pin_RST = GPIO_Pin_RST;
     handle->GPIO_Pin_SCL = GPIO_Pin_SCL;
     handle->GPIO_Pin_SDA = GPIO_Pin_SDA;
+
+    if (enable_dma && IS_SPI_DMA_ENABLED(handle->hspi)) {
+        handle->is_dma_enabled = 1;
+        handle->is_dma_tx_done = 1;
+    }
+
     return STATUS_OK;
 }
 
@@ -244,4 +285,17 @@ st7789_status_t st7789_print_sample_display(st7789_handle_t *handle) {
         st7789_send_image(handle, image, 0, y, 240, y + 1);
     }
     return STATUS_OK;
+}
+
+st7789_status_t st7789_print_pixels_with_range(st7789_handle_t *handle,
+                                               void *buffer, uint16_t sx,
+                                               uint16_t sy, uint16_t ex,
+                                               uint16_t ey) {
+
+    sx = min(max(0, sx), 240);
+    sy = min(max(0, sy), 240);
+    ex = min(max(sx, ex), 240);
+    ey = min(max(sy, ey), 240);
+
+    return st7789_send_image(handle, (st7789_rgb565_t *)buffer, sx, sy, ex, ey);
 }

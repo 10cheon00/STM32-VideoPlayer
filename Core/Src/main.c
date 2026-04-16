@@ -19,13 +19,13 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "fatfs.h"
-#include "libjpeg.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stm32f4xx_hal.h"
 
 #include "st7789.h"
+#include "video_reader.h"
 
 /* USER CODE END Includes */
 
@@ -48,19 +48,28 @@
 SD_HandleTypeDef hsd;
 
 SPI_HandleTypeDef hspi1;
+DMA_HandleTypeDef hdma_spi1_tx;
 
 /* USER CODE BEGIN PV */
 
 st7789_handle_t st7789_handle;
-
+st7789_status_t st7789_status;
+video_context_t video_context;
+video_context_status_t video_context_status;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SDIO_SD_Init(void);
 /* USER CODE BEGIN PFP */
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
+    if (hspi->Instance == SPI1) {
+        st7789_dma_tx_cplt_callback(&st7789_handle);
+    }
+}
 
 /* USER CODE END PFP */
 
@@ -99,26 +108,67 @@ int main(void) {
 
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
+    MX_DMA_Init();
     MX_SPI1_Init();
-    MX_FATFS_Init();
-    MX_LIBJPEG_Init();
     MX_SDIO_SD_Init();
+    MX_FATFS_Init();
     /* USER CODE BEGIN 2 */
     st7789_init_handle(&st7789_handle, &hspi1, LCD_CS_GPIO_Port,
                        LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, GPIOA, GPIOA,
                        LCD_CS_Pin, LCD_DC_Pin, LCD_RST_Pin, GPIO_PIN_5,
-                       GPIO_PIN_7);
+                       GPIO_PIN_7, 1);
     st7789_init_display(&st7789_handle);
     st7789_print_sample_display(&st7789_handle);
+
+    HAL_Delay(100);
+
+    video_context_init(&video_context, &SDFatFS);
+
+    video_context_status = VIDEO_CONTEXT_STATUS_OK;
+    if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+        video_context_status = video_reader_mount(&video_context, SDPath);
+    }
+
+    if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+        video_context_status =
+            video_reader_open_file(&video_context, "0:/output.rgb565");
+    }
+
+    // TODO: 초기화 단계에서 오류가 발생했음에 대한 에러 핸들링 코드 구현
+
     /* USER CODE END 2 */
 
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
+    uint16_t sy = 0, ey = 240;
+    st7789_status = STATUS_OK;
     while (1) {
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
+        sy = 0;
+        while (sy < ey) {
+            // TODO: DMA가 완료될 때까지 대기해야하는 이유를 주석으로 제시하고,
+            //       main.c에서 호출할 수 있도록 함수로 제공
+            while (!st7789_handle.is_dma_tx_done)
+                ;
+
+            if (st7789_status == STATUS_OK) {
+                video_context_status = video_reader_read_file(&video_context);
+            }
+
+            if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+                st7789_status = st7789_print_pixels_with_range(
+                    &st7789_handle, video_context.buffer, 0, sy, 240,
+                    sy + VIDEO_CONTEXT_CHUNK_OFFSET);
+            } else {
+                break;
+            }
+            sy += VIDEO_CONTEXT_CHUNK_OFFSET;
+        }
+        video_context_calculate_frame_per_milliseconds(&video_context);
     }
+    f_close(&SDFile);
     /* USER CODE END 3 */
 }
 
@@ -185,7 +235,7 @@ static void MX_SDIO_SD_Init(void) {
     hsd.Init.ClockPowerSave = SDIO_CLOCK_POWER_SAVE_DISABLE;
     hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
     hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
-    hsd.Init.ClockDiv = 0;
+    hsd.Init.ClockDiv = 4;
     /* USER CODE BEGIN SDIO_Init 2 */
 
     /* USER CODE END SDIO_Init 2 */
@@ -224,6 +274,20 @@ static void MX_SPI1_Init(void) {
     /* USER CODE BEGIN SPI1_Init 2 */
 
     /* USER CODE END SPI1_Init 2 */
+}
+
+/**
+ * Enable DMA controller clock
+ */
+static void MX_DMA_Init(void) {
+
+    /* DMA controller clock enable */
+    __HAL_RCC_DMA2_CLK_ENABLE();
+
+    /* DMA interrupt init */
+    /* DMA2_Stream2_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
 }
 
 /**
@@ -282,7 +346,8 @@ static void MX_GPIO_Init(void) {
  */
 void Error_Handler(void) {
     /* USER CODE BEGIN Error_Handler_Debug */
-    /* User can add his own implementation to report the HAL error return state
+    /* User can add his own implementation to report the HAL error return
+     * state
      */
     __disable_irq();
     while (1) {

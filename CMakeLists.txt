@@ -47,6 +47,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_SOURCE_DIR}/Core/Src/st7789.c
     ${CMAKE_SOURCE_DIR}/Core/Src/video_reader.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/video_context.c
 )
 
 # Add include paths
