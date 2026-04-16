@@ -79,12 +79,12 @@ static st7789_status_t st7789_send_command(st7789_handle_t *handle,
         if (handle->is_dma_enabled) {
             // spi가 dma를 지원하면 dma 방식으로 전송 후,
             // 등록된 콜백함수에 의해 명령어 전송을 끝냄
+            handle->is_dma_tx_done = 0;
             hal_status = HAL_SPI_Transmit_DMA(handle->hspi, parameters,
                                               parameter_length);
             if (hal_status != HAL_OK) {
                 status = STATUS_TRANSMIT_FAILED;
             }
-            handle->is_dma_tx_done = 0;
         } else {
             // spi가 dma를 지원하지 않는다면 폴링으로 전송 후 명령어 전송을 끝냄
             hal_status = HAL_SPI_Transmit(handle->hspi, parameters,
@@ -187,6 +187,9 @@ st7789_init_handle(st7789_handle_t *handle, SPI_HandleTypeDef *hspi,
     if (enable_dma && IS_SPI_DMA_ENABLED(handle->hspi)) {
         handle->is_dma_enabled = 1;
         handle->is_dma_tx_done = 1;
+    } else {
+        handle->is_dma_enabled = 0;
+        handle->is_dma_tx_done = 0;
     }
 
     return STATUS_OK;
