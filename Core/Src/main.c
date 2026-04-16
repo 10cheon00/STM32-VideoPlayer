@@ -162,8 +162,8 @@ int main(void) {
         }
     }
 
+    video_reader_close_file(&video_context);
     if (video_context_status != VIDEO_CONTEXT_STATUS_OK) {
-        video_reader_close_file(&video_context);
         Error_Handler();
     }
     /* USER CODE END 3 */
