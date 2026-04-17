@@ -21,6 +21,13 @@ video_context_status_t video_reader_open_file(video_context_t *context,
     if (f_open(&context->file, file_path, FA_READ) != FR_OK) {
         status = VIDEO_CONTEXT_STATUS_FAILED_TO_OPEN_FILE;
     }
+
+    if (status == VIDEO_CONTEXT_STATUS_OK) {
+        uint32_t file_size = f_size(&context->file);
+        uint32_t frame_size = context->st7789_handle->screen_width *
+                              context->st7789_handle->screen_width;
+        context->max_frame_index = file_size / frame_size;
+    }
     return status;
 }
 
@@ -47,6 +54,7 @@ video_context_status_t video_reader_read_file(video_context_t *context) {
     // 파일 끝에 도달할 경우 파일 포인터를 이동시킨 후 다시 파일 읽기 수행
     if (video_context_is_reached_end_of_file(context)) {
         f_lseek(&context->file, 0);
+        context->current_frame_index = 0;
         if ((fresult =
                  f_read(&context->file, context->buffer,
                         VIDEO_CONTEXT_BUFFER_SIZE * sizeof(video_buffer_t),

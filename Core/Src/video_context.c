@@ -29,6 +29,7 @@ video_context_status_t video_context_init(video_context_t *context,
     context->last_tick = HAL_GetTick();
     context->current_frame_rate = 0;
     context->target_frame_rate = target_frame_rate;
+    context->current_frame_index = 0;
 
     return VIDEO_CONTEXT_STATUS_OK;
 }
@@ -61,6 +62,7 @@ void video_context_step_next_range(video_context_t *context) {
 void video_context_update_video_meta_data(video_context_t *context) {
     video_context_calculate_current_frame_rate(context);
     video_context_calculate_next_frame_tick(context);
+    context->current_frame_index++;
 }
 
 static void

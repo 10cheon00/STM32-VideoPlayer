@@ -47,6 +47,8 @@ typedef struct {
     uint32_t last_tick;
     uint32_t next_frame_tick;
     uint32_t target_frame_rate;
+    uint32_t current_frame_index;
+    uint32_t max_frame_index;
 } video_context_t;
 
 video_context_status_t video_context_init(video_context_t *context,
