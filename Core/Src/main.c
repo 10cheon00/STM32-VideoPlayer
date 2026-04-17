@@ -25,6 +25,7 @@
 #include "stm32f4xx_hal.h"
 
 #include "st7789.h"
+#include "video_player.h"
 #include "video_reader.h"
 
 /* USER CODE END Includes */
@@ -53,7 +54,6 @@ DMA_HandleTypeDef hdma_spi1_tx;
 /* USER CODE BEGIN PV */
 
 st7789_handle_t st7789_handle;
-st7789_status_t st7789_status;
 video_context_t video_context;
 video_context_status_t video_context_status;
 /* USER CODE END PV */
@@ -114,17 +114,17 @@ int main(void) {
     MX_FATFS_Init();
     /* USER CODE BEGIN 2 */
     st7789_init_handle(&st7789_handle, &hspi1, LCD_CS_GPIO_Port,
-                       LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, GPIOA, GPIOA,
-                       LCD_CS_Pin, LCD_DC_Pin, LCD_RST_Pin, GPIO_PIN_5,
-                       GPIO_PIN_7, 1);
+                       LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, LCD_CS_Pin,
+                       LCD_DC_Pin, LCD_RST_Pin, 240, 240, ST7789_DMA_ENABLE);
     st7789_init_display(&st7789_handle);
-    st7789_print_sample_display(&st7789_handle);
+
+    video_context_status =
+        video_context_init(&video_context, &SDFatFS, &hsd, &st7789_handle, 15);
 
     HAL_Delay(100);
 
-    video_context_init(&video_context, &SDFatFS);
+    st7789_print_sample_display(&st7789_handle);
 
-    video_context_status = VIDEO_CONTEXT_STATUS_OK;
     if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
         video_context_status = video_reader_mount(&video_context, SDPath);
     }
@@ -140,35 +140,36 @@ int main(void) {
 
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
-    uint16_t sy = 0, ey = 240;
-    st7789_status = STATUS_OK;
     while (1) {
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
-        sy = 0;
-        while (sy < ey) {
-            // TODO: DMA가 완료될 때까지 대기해야하는 이유를 주석으로 제시하고,
-            //       main.c에서 호출할 수 있도록 함수로 제공
-            while (!st7789_handle.is_dma_tx_done)
-                ;
-
-            if (st7789_status == STATUS_OK) {
-                video_context_status = video_reader_read_file(&video_context);
-            }
-
-            if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-                st7789_status = st7789_print_pixels_with_range(
-                    &st7789_handle, video_context.buffer, 0, sy, 240,
-                    sy + VIDEO_CONTEXT_CHUNK_OFFSET);
-            } else {
-                break;
-            }
-            sy += VIDEO_CONTEXT_CHUNK_OFFSET;
+        if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+            video_context_wait_for_dma_and_sdio_idle(&video_context);
         }
-        video_context_calculate_frame_per_milliseconds(&video_context);
+
+        if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+            video_context_status = video_context_process_frame_timing(&video_context);
+        }
+
+        if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+            video_context_status = video_reader_read_file(&video_context);
+        }
+
+        if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+            video_context_status =
+                video_player_print_video_buffer(&video_context);
+        }
+
+        if (video_context_status != VIDEO_CONTEXT_STATUS_OK) {
+            break;
+        }
     }
-    f_close(&SDFile);
+
+    video_reader_close_file(&video_context);
+    if (video_context_status != VIDEO_CONTEXT_STATUS_OK) {
+        Error_Handler();
+    }
     /* USER CODE END 3 */
 }
 
