@@ -149,6 +149,10 @@ int main(void) {
         }
 
         if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+            video_context_status = video_context_process_frame_timing(&video_context);
+        }
+
+        if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
             video_context_status = video_reader_read_file(&video_context);
         }
 

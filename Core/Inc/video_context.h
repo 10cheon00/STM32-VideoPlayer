@@ -22,6 +22,7 @@ typedef enum {
     VIDEO_CONTEXT_STATUS_FAILED_TO_CLOSE_FILE,
     VIDEO_CONTEXT_STATUS_FAILED_TO_READ_FILE,
     VIDEO_CONTEXT_STATUS_FAILED_TO_PRINT_VIDEO_BUFFER_TO_SCREEN,
+    VIDEO_CONTEXT_STATUS_FAILED_TO_PROCESS_TIMING,
 } video_context_status_t;
 
 typedef struct {
@@ -33,10 +34,11 @@ typedef struct {
     video_buffer_t *first_buffer;
     video_buffer_t *second_buffer;
     uint8_t use_first_buffer;
-    UINT read_size;
-    DWORD file_size;
-    DWORD total_read_size;
-    DWORD previous_total_read_size; // 이전 프레임까지 읽은 바이트 수
+    UINT bytes_read;
+    DWORD file_bytes;
+    DWORD frame_bytes;
+    DWORD total_bytes_read;
+    DWORD next_frame_start_byte;
 
     // 비디오 파일 재생을 위한 멤버들
     st7789_handle_t *st7789_handle;
@@ -63,5 +65,8 @@ video_context_status_t video_context_init(video_context_t *context,
 void video_context_wait_for_dma_and_sdio_idle(video_context_t *context);
 
 void video_context_step_next_range(video_context_t *context);
+
+video_context_status_t
+video_context_process_frame_timing(video_context_t *context);
 
 #endif

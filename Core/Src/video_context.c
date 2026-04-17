@@ -7,6 +7,12 @@ static void video_context_update_video_meta_data(video_context_t *context);
 static void
 video_context_calculate_current_frame_rate(video_context_t *context);
 static void video_context_calculate_next_frame_tick(video_context_t *context);
+static void
+video_context_update_next_frame_start_byte(video_context_t *context);
+static uint8_t video_context_is_frame_print_complete(video_context_t *context);
+static uint8_t
+video_context_is_next_frame_deadline_missed(video_context_t *context);
+static void video_context_reset_video_meta_data(video_context_t *context);
 
 video_context_status_t video_context_init(video_context_t *context,
                                           FATFS *sd_fatfs,
@@ -29,9 +35,12 @@ video_context_status_t video_context_init(video_context_t *context,
     context->last_tick = HAL_GetTick();
     context->current_frame_rate = 0;
     context->target_frame_rate = target_frame_rate;
-    context->file_size = 0;
-    context->total_read_size = 0;
-    context->previous_total_read_size = 0;
+    context->bytes_read = 0;
+    context->file_bytes = 0;
+    context->frame_bytes = 0;
+    context->total_bytes_read = 0;
+    context->next_frame_start_byte = 0;
+
     context->max_frame_index = 0;
 
     return VIDEO_CONTEXT_STATUS_OK;
@@ -57,15 +66,13 @@ void video_context_step_next_range(video_context_t *context) {
     if (context->ey > context->st7789_handle->screen_height) {
         context->sy = 0;
         context->ey = VIDEO_CONTEXT_CHUNK_OFFSET;
-
-        video_context_update_video_meta_data(context);
     }
 }
 
-void video_context_update_video_meta_data(video_context_t *context) {
+static void video_context_update_video_meta_data(video_context_t *context) {
     video_context_calculate_current_frame_rate(context);
     video_context_calculate_next_frame_tick(context);
-    video_context_update_previous_total_read_size(context);
+    video_context_update_next_frame_start_byte(context);
 }
 
 static void
@@ -89,6 +96,45 @@ static void video_context_calculate_next_frame_tick(video_context_t *context) {
 }
 
 static void
-video_context_update_previous_total_read_size(video_context_t *context) {
-    context->previous_total_read_size = context->total_read_size;
+video_context_update_next_frame_start_byte(video_context_t *context) {
+    context->next_frame_start_byte =
+        context->total_bytes_read + context->frame_bytes;
+}
+
+video_context_status_t
+video_context_process_frame_timing(video_context_t *context) {
+    video_context_status_t status = VIDEO_CONTEXT_STATUS_OK;
+
+    if (video_context_is_frame_print_complete(context)) {
+        //
+        while (HAL_GetTick() < context->next_frame_tick)
+            ;
+        video_context_update_video_meta_data(context);
+    }
+
+    if (video_context_is_next_frame_deadline_missed(context)) {
+        //
+        FRESULT fresult =
+            f_lseek(&context->file, context->next_frame_start_byte);
+        if (fresult == FR_OK) {
+            video_context_reset_video_meta_data(context);
+            video_context_update_video_meta_data(context);
+        } else {
+            status = VIDEO_CONTEXT_STATUS_FAILED_TO_PROCESS_TIMING;
+        }
+    }
+    return status;
+}
+
+static uint8_t video_context_is_frame_print_complete(video_context_t *context) {
+    return context->total_bytes_read >= context->next_frame_start_byte;
+}
+
+static uint8_t
+video_context_is_next_frame_deadline_missed(video_context_t *context) {
+    return HAL_GetTick() >= context->next_frame_tick;
+}
+
+static void video_context_reset_video_meta_data(video_context_t *context) {
+    context->total_bytes_read = 0;
 }
