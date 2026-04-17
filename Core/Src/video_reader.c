@@ -1,5 +1,6 @@
 #include "video_reader.h"
 
+static void video_context_switch_buffer_address(video_context_t *context);
 static uint8_t video_context_is_reached_end_of_file(video_context_t *context);
 
 video_context_status_t video_reader_mount(video_context_t *context,
@@ -55,6 +56,16 @@ video_context_status_t video_reader_read_file(video_context_t *context) {
     }
 
     return status;
+}
+
+static void video_context_switch_buffer_address(video_context_t *context) {
+    context->use_first_buffer = !context->use_first_buffer;
+
+    if (context->use_first_buffer) {
+        context->buffer = context->first_buffer;
+    } else {
+        context->buffer = context->second_buffer;
+    }
 }
 
 static uint8_t video_context_is_reached_end_of_file(video_context_t *context) {

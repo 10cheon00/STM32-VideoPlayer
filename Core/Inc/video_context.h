@@ -30,7 +30,9 @@ typedef struct {
     SD_HandleTypeDef *hsd;
     FIL file;
     video_buffer_t *buffer;
-    uint8_t use_buffer_a;
+    video_buffer_t *first_buffer;
+    video_buffer_t *second_buffer;
+    uint8_t use_first_buffer;
     UINT read_size;
 
     // 비디오 파일 재생을 위한 멤버들
@@ -52,8 +54,6 @@ video_context_status_t video_context_init(video_context_t *context,
                                           SD_HandleTypeDef *hsd,
                                           st7789_handle_t *st7789_handle,
                                           uint32_t target_frame_rate);
-
-void video_context_switch_buffer_address(video_context_t *context);
 
 void video_context_wait_for_dma_and_sdio_idle(video_context_t *context);
 

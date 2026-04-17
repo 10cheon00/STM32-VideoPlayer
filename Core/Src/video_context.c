@@ -1,7 +1,7 @@
 #include "video_context.h"
 
-static video_buffer_t buffer_a[VIDEO_CONTEXT_BUFFER_SIZE];
-static video_buffer_t buffer_b[VIDEO_CONTEXT_BUFFER_SIZE];
+static video_buffer_t first_buffer[VIDEO_CONTEXT_BUFFER_SIZE];
+static video_buffer_t second_buffer[VIDEO_CONTEXT_BUFFER_SIZE];
 
 static void video_context_update_video_meta_data(video_context_t *context);
 static void
@@ -15,8 +15,10 @@ video_context_status_t video_context_init(video_context_t *context,
                                           uint32_t target_frame_rate) {
     context->sd_fatfs = sd_fatfs;
     context->hsd = hsd;
-    context->use_buffer_a = 0;
-    context->buffer = buffer_b;
+    context->use_first_buffer = 0;
+    context->first_buffer = first_buffer;
+    context->second_buffer = second_buffer;
+    context->buffer = context->first_buffer;
 
     context->st7789_handle = st7789_handle;
     context->sx = 0;
@@ -29,16 +31,6 @@ video_context_status_t video_context_init(video_context_t *context,
     context->target_frame_rate = target_frame_rate;
 
     return VIDEO_CONTEXT_STATUS_OK;
-}
-
-void video_context_switch_buffer_address(video_context_t *context) {
-    context->use_buffer_a = !context->use_buffer_a;
-
-    if (context->use_buffer_a) {
-        context->buffer = buffer_a;
-    } else {
-        context->buffer = buffer_b;
-    }
 }
 
 /**
