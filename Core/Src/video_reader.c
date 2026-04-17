@@ -1,5 +1,7 @@
 #include "video_reader.h"
 
+static uint8_t video_context_is_reached_end_of_file(video_context_t *context);
+
 video_context_status_t video_reader_mount(video_context_t *context,
                                           const TCHAR *sd_path) {
     video_context_status_t status = VIDEO_CONTEXT_STATUS_OK;
@@ -31,15 +33,30 @@ video_context_status_t video_reader_close_file(video_context_t *context) {
 
 video_context_status_t video_reader_read_file(video_context_t *context) {
     video_context_status_t status = VIDEO_CONTEXT_STATUS_OK;
+    // TODO: 다음 프레임 출력 시간까지 기다리기
 
     video_context_switch_buffer_address(context);
     FRESULT fresult;
     if ((fresult = f_read(&context->file, context->buffer,
                           VIDEO_CONTEXT_BUFFER_SIZE * sizeof(video_buffer_t),
                           &context->read_size)) != FR_OK) {
-        // TODO: 읽기에 실패할 경우 에러 핸들링 구현
         status = VIDEO_CONTEXT_STATUS_FAILED_TO_READ_FILE;
     }
 
+    // 파일 끝에 도달할 경우 파일 포인터를 이동시킨 후 다시 파일 읽기 수행
+    if (video_context_is_reached_end_of_file(context)) {
+        f_lseek(&context->file, 0);
+        if ((fresult =
+                 f_read(&context->file, context->buffer,
+                        VIDEO_CONTEXT_BUFFER_SIZE * sizeof(video_buffer_t),
+                        &context->read_size)) != FR_OK) {
+            status = VIDEO_CONTEXT_STATUS_FAILED_TO_READ_FILE;
+        }
+    }
+
     return status;
+}
+
+static uint8_t video_context_is_reached_end_of_file(video_context_t *context) {
+    return context->read_size <= VIDEO_CONTEXT_BUFFER_SIZE;
 }
