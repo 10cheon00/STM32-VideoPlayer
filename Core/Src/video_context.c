@@ -112,6 +112,8 @@ video_context_process_frame_timing(video_context_t *context) {
         video_context_update_video_meta_data(context);
     }
 
+    // TODO:
+    // 시스템 출력 주기가 느리다면 화면 하단이 갱신되지 않는 문제가 있음
     if (video_context_is_next_frame_deadline_missed(context)) {
         //
         FRESULT fresult =
