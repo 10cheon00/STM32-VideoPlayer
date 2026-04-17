@@ -29,7 +29,10 @@ video_context_status_t video_context_init(video_context_t *context,
     context->last_tick = HAL_GetTick();
     context->current_frame_rate = 0;
     context->target_frame_rate = target_frame_rate;
-    context->current_frame_index = 0;
+    context->file_size = 0;
+    context->total_read_size = 0;
+    context->previous_total_read_size = 0;
+    context->max_frame_index = 0;
 
     return VIDEO_CONTEXT_STATUS_OK;
 }
@@ -62,7 +65,7 @@ void video_context_step_next_range(video_context_t *context) {
 void video_context_update_video_meta_data(video_context_t *context) {
     video_context_calculate_current_frame_rate(context);
     video_context_calculate_next_frame_tick(context);
-    context->current_frame_index++;
+    video_context_update_previous_total_read_size(context);
 }
 
 static void
@@ -81,5 +84,11 @@ video_context_calculate_current_frame_rate(video_context_t *context) {
 }
 
 static void video_context_calculate_next_frame_tick(video_context_t *context) {
-    context->next_frame_tick = HAL_GetTick() + 1000U / context->target_frame_rate;
+    context->next_frame_tick =
+        HAL_GetTick() + 1000U / context->target_frame_rate;
+}
+
+static void
+video_context_update_previous_total_read_size(video_context_t *context) {
+    context->previous_total_read_size = context->total_read_size;
 }

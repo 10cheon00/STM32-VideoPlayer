@@ -34,6 +34,9 @@ typedef struct {
     video_buffer_t *second_buffer;
     uint8_t use_first_buffer;
     UINT read_size;
+    DWORD file_size;
+    DWORD total_read_size;
+    DWORD previous_total_read_size; // 이전 프레임까지 읽은 바이트 수
 
     // 비디오 파일 재생을 위한 멤버들
     st7789_handle_t *st7789_handle;
@@ -47,7 +50,7 @@ typedef struct {
     uint32_t last_tick;
     uint32_t next_frame_tick;
     uint32_t target_frame_rate;
-    uint32_t current_frame_index;
+
     uint32_t max_frame_index;
 } video_context_t;
 
