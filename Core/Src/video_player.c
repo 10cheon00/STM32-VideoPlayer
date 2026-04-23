@@ -10,7 +10,7 @@ video_player_print_video_buffer(video_context_t *context) {
                                        context->ey) == ST7789_STATUS_OK) {
         video_context_step_next_range(context);
     } else {
-        status = VIDEO_CONTEXT_STATUS_FAILED_TO_PRINT_VIDEO_BUFFER_TO_SCREEN;
+        status = VIDEO_CONTEXT_STATUS_FAILED_TO_PRINT_VIDEO_BUFFER_TO_DISPLAY;
     }
     return status;
 }

@@ -118,16 +118,14 @@ int main(void) {
     st7789_init_handle(&st7789_handle, &hspi1, LCD_CS_GPIO_Port,
                        LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, LCD_CS_Pin,
                        LCD_DC_Pin, LCD_RST_Pin, 240, 240, ST7789_DMA_ENABLE);
-    st7789_init_display(&st7789_handle);
 
     video_context_status =
         video_context_init(&video_context, &SDFatFS, &hsd, &st7789_handle, 15);
 
     HAL_Delay(100);
-
-    st7789_print_sample_display(&st7789_handle);
-
+    
     if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+        st7789_print_sample_display(&st7789_handle);
         video_context_status = video_reader_mount(&video_context, SDPath);
     }
 
@@ -150,7 +148,8 @@ int main(void) {
         }
 
         if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-            video_context_status = video_context_process_frame_timing(&video_context);
+            video_context_status =
+                video_context_process_frame_timing(&video_context);
         }
 
         if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {

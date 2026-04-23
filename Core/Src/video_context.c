@@ -19,6 +19,8 @@ video_context_status_t video_context_init(video_context_t *context,
                                           SD_HandleTypeDef *hsd,
                                           st7789_handle_t *st7789_handle,
                                           uint32_t target_frame_rate) {
+    video_context_status_t status = VIDEO_CONTEXT_STATUS_OK;
+
     context->sd_fatfs = sd_fatfs;
     context->hsd = hsd;
     context->use_first_buffer = 0;
@@ -43,7 +45,10 @@ video_context_status_t video_context_init(video_context_t *context,
 
     context->max_frame_index = 0;
 
-    return VIDEO_CONTEXT_STATUS_OK;
+    if (st7789_init_display(context->st7789_handle) != ST7789_STATUS_OK) {
+        status = VIDEO_CONTEXT_STATUS_FAILED_TO_INIT_DISPLAY;
+    }
+    return status;
 }
 
 /**
