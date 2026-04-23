@@ -12,7 +12,6 @@ video_context_update_next_frame_start_byte(video_context_t *context);
 static uint8_t video_context_is_frame_print_complete(video_context_t *context);
 static uint8_t
 video_context_is_next_frame_deadline_missed(video_context_t *context);
-static void video_context_reset_video_meta_data(video_context_t *context);
 
 video_context_status_t video_context_init(video_context_t *context,
                                           FATFS *sd_fatfs,
