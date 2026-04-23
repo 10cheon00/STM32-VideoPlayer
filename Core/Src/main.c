@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "stm32f4xx_hal.h"
 
+#include "error_handler.h"
 #include "st7789.h"
 #include "video_player.h"
 #include "video_reader.h"
@@ -56,6 +57,7 @@ DMA_HandleTypeDef hdma_spi1_tx;
 st7789_handle_t st7789_handle;
 video_context_t video_context;
 video_context_status_t video_context_status;
+error_handler_error_code_t error_code;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -134,13 +136,12 @@ int main(void) {
             video_reader_open_file(&video_context, "0:/output.rgb565");
     }
 
-    // TODO: 초기화 단계에서 오류가 발생했음에 대한 에러 핸들링 코드 구현
-
     /* USER CODE END 2 */
 
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
-    while (1) {
+    while ((error_code = error_handler_get_error_code(video_context_status)) ==
+           ERROR_HANDLER_NO_ERROR) {
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
@@ -166,9 +167,10 @@ int main(void) {
         }
     }
 
-    video_reader_close_file(&video_context);
+    video_context_status = video_reader_close_file(&video_context);
+
     if (video_context_status != VIDEO_CONTEXT_STATUS_OK) {
-        Error_Handler();
+        error_handler_handle_error(error_code);
     }
     /* USER CODE END 3 */
 }
