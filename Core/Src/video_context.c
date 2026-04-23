@@ -12,13 +12,14 @@ video_context_update_next_frame_start_byte(video_context_t *context);
 static uint8_t video_context_is_frame_print_complete(video_context_t *context);
 static uint8_t
 video_context_is_next_frame_deadline_missed(video_context_t *context);
-static void video_context_reset_video_meta_data(video_context_t *context);
 
 video_context_status_t video_context_init(video_context_t *context,
                                           FATFS *sd_fatfs,
                                           SD_HandleTypeDef *hsd,
                                           st7789_handle_t *st7789_handle,
                                           uint32_t target_frame_rate) {
+    video_context_status_t status = VIDEO_CONTEXT_STATUS_OK;
+
     context->sd_fatfs = sd_fatfs;
     context->hsd = hsd;
     context->use_first_buffer = 0;
@@ -40,10 +41,14 @@ video_context_status_t video_context_init(video_context_t *context,
     context->frame_bytes = 0;
     context->total_bytes_read = 0;
     context->next_frame_start_byte = 0;
+    context->deadline_missed_count = 0;
 
     context->max_frame_index = 0;
 
-    return VIDEO_CONTEXT_STATUS_OK;
+    if (st7789_init_display(context->st7789_handle) != ST7789_STATUS_OK) {
+        status = VIDEO_CONTEXT_STATUS_FAILED_TO_INIT_DISPLAY;
+    }
+    return status;
 }
 
 /**
@@ -112,16 +117,9 @@ video_context_process_frame_timing(video_context_t *context) {
         video_context_update_video_meta_data(context);
     }
 
-    // TODO:
-    // 시스템 출력 주기가 느리다면 화면 하단이 갱신되지 않는 문제가 있음
     if (video_context_is_next_frame_deadline_missed(context)) {
-        //
-        FRESULT fresult =
-            f_lseek(&context->file, context->next_frame_start_byte);
-        if (fresult == FR_OK) {
-            video_context_reset_video_meta_data(context);
-            video_context_update_video_meta_data(context);
-        } else {
+        context->deadline_missed_count++;
+        if (context->deadline_missed_count > 10) {
             status = VIDEO_CONTEXT_STATUS_FAILED_TO_PROCESS_TIMING;
         }
     }
@@ -135,8 +133,4 @@ static uint8_t video_context_is_frame_print_complete(video_context_t *context) {
 static uint8_t
 video_context_is_next_frame_deadline_missed(video_context_t *context) {
     return HAL_GetTick() >= context->next_frame_tick;
-}
-
-static void video_context_reset_video_meta_data(video_context_t *context) {
-    context->total_bytes_read = 0;
 }

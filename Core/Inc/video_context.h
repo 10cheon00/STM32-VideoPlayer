@@ -17,11 +17,12 @@ typedef uint16_t video_buffer_t;
 typedef enum {
     VIDEO_CONTEXT_STATUS_OK = 0,
     VIDEO_CONTEXT_STATUS_BUSY,
+    VIDEO_CONTEXT_STATUS_FAILED_TO_INIT_DISPLAY,
+    VIDEO_CONTEXT_STATUS_FAILED_TO_PRINT_VIDEO_BUFFER_TO_DISPLAY,
     VIDEO_CONTEXT_STATUS_FAILED_TO_MOUNT,
     VIDEO_CONTEXT_STATUS_FAILED_TO_OPEN_FILE,
     VIDEO_CONTEXT_STATUS_FAILED_TO_CLOSE_FILE,
     VIDEO_CONTEXT_STATUS_FAILED_TO_READ_FILE,
-    VIDEO_CONTEXT_STATUS_FAILED_TO_PRINT_VIDEO_BUFFER_TO_SCREEN,
     VIDEO_CONTEXT_STATUS_FAILED_TO_PROCESS_TIMING,
 } video_context_status_t;
 
@@ -52,6 +53,7 @@ typedef struct {
     uint32_t last_tick;
     uint32_t next_frame_tick;
     uint32_t target_frame_rate;
+    uint8_t deadline_missed_count;
 
     uint32_t max_frame_index;
 } video_context_t;

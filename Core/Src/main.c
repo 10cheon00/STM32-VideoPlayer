@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "stm32f4xx_hal.h"
 
+#include "error_handler.h"
 #include "st7789.h"
 #include "video_player.h"
 #include "video_reader.h"
@@ -56,6 +57,8 @@ DMA_HandleTypeDef hdma_spi1_tx;
 st7789_handle_t st7789_handle;
 video_context_t video_context;
 video_context_status_t video_context_status;
+error_handler_handle_t error_handler_handle;
+error_handler_error_code_t error_code;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -116,16 +119,16 @@ int main(void) {
     st7789_init_handle(&st7789_handle, &hspi1, LCD_CS_GPIO_Port,
                        LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, LCD_CS_Pin,
                        LCD_DC_Pin, LCD_RST_Pin, 240, 240, ST7789_DMA_ENABLE);
-    st7789_init_display(&st7789_handle);
+    error_handler_init_handle(&error_handler_handle, GPIOC, GPIO_PIN_13,
+                              &st7789_handle);
 
     video_context_status =
         video_context_init(&video_context, &SDFatFS, &hsd, &st7789_handle, 15);
 
     HAL_Delay(100);
 
-    st7789_print_sample_display(&st7789_handle);
-
     if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+        st7789_print_sample_display(&st7789_handle);
         video_context_status = video_reader_mount(&video_context, SDPath);
     }
 
@@ -133,8 +136,6 @@ int main(void) {
         video_context_status =
             video_reader_open_file(&video_context, "0:/output.rgb565");
     }
-
-    // TODO: 초기화 단계에서 오류가 발생했음에 대한 에러 핸들링 코드 구현
 
     /* USER CODE END 2 */
 
@@ -149,7 +150,8 @@ int main(void) {
         }
 
         if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-            video_context_status = video_context_process_frame_timing(&video_context);
+            video_context_status =
+                video_context_process_frame_timing(&video_context);
         }
 
         if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
@@ -161,14 +163,17 @@ int main(void) {
                 video_player_print_video_buffer(&video_context);
         }
 
+        // HAL_Delay(100);
         if (video_context_status != VIDEO_CONTEXT_STATUS_OK) {
+            error_code = error_handler_get_error_code(video_context_status);
             break;
         }
     }
 
-    video_reader_close_file(&video_context);
+    // video_reader_close_file(&video_context);
+
     if (video_context_status != VIDEO_CONTEXT_STATUS_OK) {
-        Error_Handler();
+        error_handler_handle_error(&error_handler_handle, error_code);
     }
     /* USER CODE END 3 */
 }
@@ -303,14 +308,25 @@ static void MX_GPIO_Init(void) {
     /* USER CODE END MX_GPIO_Init_1 */
 
     /* GPIO Ports Clock Enable */
+    __HAL_RCC_GPIOC_CLK_ENABLE();
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
+
+    /*Configure GPIO pin Output Level */
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
     /*Configure GPIO pin Output Level */
     HAL_GPIO_WritePin(GPIOA, LCD_RST_Pin | LCD_DC_Pin, GPIO_PIN_RESET);
 
     /*Configure GPIO pin Output Level */
     HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_RESET);
+
+    /*Configure GPIO pin : PC13 */
+    GPIO_InitStruct.Pin = GPIO_PIN_13;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
     /*Configure GPIO pins : LCD_RST_Pin LCD_DC_Pin */
     GPIO_InitStruct.Pin = LCD_RST_Pin | LCD_DC_Pin;
