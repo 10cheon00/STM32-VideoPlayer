@@ -53,6 +53,7 @@ typedef struct {
     uint32_t last_tick;
     uint32_t next_frame_tick;
     uint32_t target_frame_rate;
+    uint8_t deadline_missed_count;
 
     uint32_t max_frame_index;
 } video_context_t;

@@ -57,6 +57,7 @@ DMA_HandleTypeDef hdma_spi1_tx;
 st7789_handle_t st7789_handle;
 video_context_t video_context;
 video_context_status_t video_context_status;
+error_handler_handle_t error_handler_handle;
 error_handler_error_code_t error_code;
 /* USER CODE END PV */
 
@@ -118,12 +119,14 @@ int main(void) {
     st7789_init_handle(&st7789_handle, &hspi1, LCD_CS_GPIO_Port,
                        LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, LCD_CS_Pin,
                        LCD_DC_Pin, LCD_RST_Pin, 240, 240, ST7789_DMA_ENABLE);
+    error_handler_init_handle(&error_handler_handle, GPIOC, GPIO_PIN_13,
+                              &st7789_handle);
 
     video_context_status =
         video_context_init(&video_context, &SDFatFS, &hsd, &st7789_handle, 15);
 
     HAL_Delay(100);
-    
+
     if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
         st7789_print_sample_display(&st7789_handle);
         video_context_status = video_reader_mount(&video_context, SDPath);
@@ -138,8 +141,7 @@ int main(void) {
 
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
-    while ((error_code = error_handler_get_error_code(video_context_status)) ==
-           ERROR_HANDLER_NO_ERROR) {
+    while (1) {
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
@@ -161,15 +163,17 @@ int main(void) {
                 video_player_print_video_buffer(&video_context);
         }
 
+        // HAL_Delay(100);
         if (video_context_status != VIDEO_CONTEXT_STATUS_OK) {
+            error_code = error_handler_get_error_code(video_context_status);
             break;
         }
     }
 
-    video_context_status = video_reader_close_file(&video_context);
+    // video_reader_close_file(&video_context);
 
     if (video_context_status != VIDEO_CONTEXT_STATUS_OK) {
-        error_handler_handle_error(error_code);
+        error_handler_handle_error(&error_handler_handle, error_code);
     }
     /* USER CODE END 3 */
 }
