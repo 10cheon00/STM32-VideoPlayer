@@ -49,6 +49,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Core/Src/video_context.c
     ${CMAKE_SOURCE_DIR}/Core/Src/video_reader.c
     ${CMAKE_SOURCE_DIR}/Core/Src/video_player.c 
+    ${CMAKE_SOURCE_DIR}/Core/Src/error_handler.c
 )
 
 # Add include paths
