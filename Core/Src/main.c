@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 #include "fatfs.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -52,6 +53,13 @@ SD_HandleTypeDef hsd;
 SPI_HandleTypeDef hspi1;
 DMA_HandleTypeDef hdma_spi1_tx;
 
+osThreadId VideoTaskHandle;
+osThreadId SdTaskHandle;
+osThreadId LcdTaskHandle;
+osMessageQId frameBufferQueueHandle;
+osMutexId ioMutexHandle;
+osSemaphoreId lcdDmaDoneSemHandle;
+osSemaphoreId sdReadDoneSemHandle;
 /* USER CODE BEGIN PV */
 
 st7789_handle_t st7789_handle;
@@ -67,6 +75,10 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SDIO_SD_Init(void);
+void StartVideoTask(void const *argument);
+void StartSdTask(void const *argument);
+void StartLcdTask(void const *argument);
+
 /* USER CODE BEGIN PFP */
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
     if (hspi->Instance == SPI1) {
@@ -116,28 +128,86 @@ int main(void) {
     MX_SDIO_SD_Init();
     MX_FATFS_Init();
     /* USER CODE BEGIN 2 */
-    st7789_init_handle(&st7789_handle, &hspi1, LCD_CS_GPIO_Port,
-                       LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, LCD_CS_Pin,
-                       LCD_DC_Pin, LCD_RST_Pin, 240, 240, ST7789_DMA_ENABLE);
-    error_handler_init_handle(&error_handler_handle, GPIOC, GPIO_PIN_13,
-                              &st7789_handle);
+    // st7789_init_handle(&st7789_handle, &hspi1, LCD_CS_GPIO_Port,
+    //                    LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, LCD_CS_Pin,
+    //                    LCD_DC_Pin, LCD_RST_Pin, 240, 240, ST7789_DMA_ENABLE);
+    // error_handler_init_handle(&error_handler_handle, GPIOC, GPIO_PIN_13,
+    //                           &st7789_handle);
 
-    video_context_status =
-        video_context_init(&video_context, &SDFatFS, &hsd, &st7789_handle, 15);
+    // video_context_status =
+    //     video_context_init(&video_context, &SDFatFS, &hsd, &st7789_handle,
+    //     15);
 
-    HAL_Delay(100);
+    // HAL_Delay(100);
 
-    if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-        st7789_print_sample_display(&st7789_handle);
-        video_context_status = video_reader_mount(&video_context, SDPath);
-    }
+    // if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+    //     st7789_print_sample_display(&st7789_handle);
+    //     video_context_status = video_reader_mount(&video_context, SDPath);
+    // }
 
-    if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-        video_context_status =
-            video_reader_open_file(&video_context, "0:/output.rgb565");
-    }
-
+    // if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
+    //     video_context_status =
+    //         video_reader_open_file(&video_context, "0:/output.rgb565");
+    // }
     /* USER CODE END 2 */
+
+    /* Create the mutex(es) */
+    /* definition and creation of ioMutex */
+    osMutexDef(ioMutex);
+    ioMutexHandle = osMutexCreate(osMutex(ioMutex));
+
+    /* USER CODE BEGIN RTOS_MUTEX */
+    /* add mutexes, ... */
+    /* USER CODE END RTOS_MUTEX */
+
+    /* Create the semaphores(s) */
+    /* definition and creation of lcdDmaDoneSem */
+    osSemaphoreDef(lcdDmaDoneSem);
+    lcdDmaDoneSemHandle = osSemaphoreCreate(osSemaphore(lcdDmaDoneSem), 1);
+
+    /* definition and creation of sdReadDoneSem */
+    osSemaphoreDef(sdReadDoneSem);
+    sdReadDoneSemHandle = osSemaphoreCreate(osSemaphore(sdReadDoneSem), 1);
+
+    /* USER CODE BEGIN RTOS_SEMAPHORES */
+    /* add semaphores, ... */
+    /* USER CODE END RTOS_SEMAPHORES */
+
+    /* USER CODE BEGIN RTOS_TIMERS */
+    /* start timers, add new ones, ... */
+    /* USER CODE END RTOS_TIMERS */
+
+    /* Create the queue(s) */
+    /* definition and creation of frameBufferQueue */
+    osMessageQDef(frameBufferQueue, 4, uint16_t);
+    frameBufferQueueHandle =
+        osMessageCreate(osMessageQ(frameBufferQueue), NULL);
+
+    /* USER CODE BEGIN RTOS_QUEUES */
+    /* add queues, ... */
+    /* USER CODE END RTOS_QUEUES */
+
+    /* Create the thread(s) */
+    /* definition and creation of VideoTask */
+    osThreadDef(VideoTask, StartVideoTask, osPriorityNormal, 0, 512);
+    VideoTaskHandle = osThreadCreate(osThread(VideoTask), NULL);
+
+    /* definition and creation of SdTask */
+    osThreadDef(SdTask, StartSdTask, osPriorityAboveNormal, 0, 1024);
+    SdTaskHandle = osThreadCreate(osThread(SdTask), NULL);
+
+    /* definition and creation of LcdTask */
+    osThreadDef(LcdTask, StartLcdTask, osPriorityAboveNormal, 0, 1024);
+    LcdTaskHandle = osThreadCreate(osThread(LcdTask), NULL);
+
+    /* USER CODE BEGIN RTOS_THREADS */
+    /* add threads, ... */
+    /* USER CODE END RTOS_THREADS */
+
+    /* Start scheduler */
+    osKernelStart();
+
+    /* We should never get here as control is now taken by the scheduler */
 
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
@@ -145,37 +215,8 @@ int main(void) {
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
-        if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-            video_context_wait_for_dma_and_sdio_idle(&video_context);
-        }
-
-        if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-            video_context_status =
-                video_context_process_frame_timing(&video_context);
-        }
-
-        if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-            video_context_status = video_reader_read_file(&video_context);
-        }
-
-        if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-            video_context_status =
-                video_player_print_video_buffer(&video_context);
-        }
-
-        // HAL_Delay(100);
-        if (video_context_status != VIDEO_CONTEXT_STATUS_OK) {
-            error_code = error_handler_get_error_code(video_context_status);
-            break;
-        }
+        /* USER CODE END 3 */
     }
-
-    // video_reader_close_file(&video_context);
-
-    if (video_context_status != VIDEO_CONTEXT_STATUS_OK) {
-        error_handler_handle_error(&error_handler_handle, error_code);
-    }
-    /* USER CODE END 3 */
 }
 
 /**
@@ -191,8 +232,8 @@ void SystemClock_Config(void) {
     __HAL_RCC_PWR_CLK_ENABLE();
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-    /** Initializes the RCC Oscillators according to the specified parameters
-     * in the RCC_OscInitTypeDef structure.
+    /** Initializes the RCC Oscillators according to the specified
+     * parameters in the RCC_OscInitTypeDef structure.
      */
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
     RCC_OscInitStruct.HSIState = RCC_HSI_ON;
@@ -292,7 +333,7 @@ static void MX_DMA_Init(void) {
 
     /* DMA interrupt init */
     /* DMA2_Stream2_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
 }
 
@@ -356,6 +397,74 @@ static void MX_GPIO_Init(void) {
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartVideoTask */
+/**
+ * @brief  Function implementing the VideoTask thread.
+ * @param  argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartVideoTask */
+void StartVideoTask(void const *argument) {
+    /* USER CODE BEGIN 5 */
+    /* Infinite loop */
+    for (;;) {
+        osDelay(1);
+    }
+    /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartSdTask */
+/**
+ * @brief Function implementing the SdTask thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartSdTask */
+void StartSdTask(void const *argument) {
+    /* USER CODE BEGIN StartSdTask */
+    /* Infinite loop */
+    for (;;) {
+        osDelay(1);
+    }
+    /* USER CODE END StartSdTask */
+}
+
+/* USER CODE BEGIN Header_StartLcdTask */
+/**
+ * @brief Function implementing the LcdTask thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartLcdTask */
+void StartLcdTask(void const *argument) {
+    /* USER CODE BEGIN StartLcdTask */
+    /* Infinite loop */
+    for (;;) {
+        osDelay(1);
+    }
+    /* USER CODE END StartLcdTask */
+}
+
+/**
+ * @brief  Period elapsed callback in non blocking mode
+ * @note   This function is called  when TIM5 interrupt took place, inside
+ * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to
+ * increment a global variable "uwTick" used as application time base.
+ * @param  htim : TIM handle
+ * @retval None
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+    /* USER CODE BEGIN Callback 0 */
+
+    /* USER CODE END Callback 0 */
+    if (htim->Instance == TIM5) {
+        HAL_IncTick();
+    }
+    /* USER CODE BEGIN Callback 1 */
+
+    /* USER CODE END Callback 1 */
+}
 
 /**
  * @brief  This function is executed in case of error occurrence.
