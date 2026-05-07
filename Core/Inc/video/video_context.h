@@ -5,7 +5,7 @@
  */
 #include "fatfs.h"
 
-#include "st7789.h"
+#include "../lcd/st7789.h"
 
 typedef uint16_t video_buffer_t;
 

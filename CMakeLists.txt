@@ -45,16 +45,22 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-    ${CMAKE_SOURCE_DIR}/Core/Src/st7789.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/video_context.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/video_reader.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/video_player.c 
+    ${CMAKE_SOURCE_DIR}/Core/Src/lcd/st7789.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/task/lcd_task.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/task/sd_task.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/task/video_task.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/video/video_reader.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/video/video_context.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/video/video_player.c 
     ${CMAKE_SOURCE_DIR}/Core/Src/error_handler.c
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
+    ${CMAKE_SOURCE_DIR}/Core/Inc/lcd
+    ${CMAKE_SOURCE_DIR}/Core/Inc/task
+    ${CMAKE_SOURCE_DIR}/Core/Inc/video
 )
 
 # Add project symbols (macros)

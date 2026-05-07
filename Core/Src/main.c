@@ -25,10 +25,12 @@
 /* USER CODE BEGIN Includes */
 #include "stm32f4xx_hal.h"
 
-#include "error_handler.h"
-#include "st7789.h"
-#include "video_player.h"
-#include "video_reader.h"
+#include "lcd/st7789.h"
+#include "task/lcd_task.h"
+#include "task/sd_task.h"
+#include "task/video_task.h"
+#include "video/video_player.h"
+#include "video/video_reader.h"
 
 /* USER CODE END Includes */
 
@@ -65,8 +67,6 @@ osSemaphoreId sdReadDoneSemHandle;
 st7789_handle_t st7789_handle;
 video_context_t video_context;
 video_context_status_t video_context_status;
-error_handler_handle_t error_handler_handle;
-error_handler_error_code_t error_code;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -128,27 +128,7 @@ int main(void) {
     MX_SDIO_SD_Init();
     MX_FATFS_Init();
     /* USER CODE BEGIN 2 */
-    // st7789_init_handle(&st7789_handle, &hspi1, LCD_CS_GPIO_Port,
-    //                    LCD_DC_GPIO_Port, LCD_RST_GPIO_Port, LCD_CS_Pin,
-    //                    LCD_DC_Pin, LCD_RST_Pin, 240, 240, ST7789_DMA_ENABLE);
-    // error_handler_init_handle(&error_handler_handle, GPIOC, GPIO_PIN_13,
-    //                           &st7789_handle);
 
-    // video_context_status =
-    //     video_context_init(&video_context, &SDFatFS, &hsd, &st7789_handle,
-    //     15);
-
-    // HAL_Delay(100);
-
-    // if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-    //     st7789_print_sample_display(&st7789_handle);
-    //     video_context_status = video_reader_mount(&video_context, SDPath);
-    // }
-
-    // if (video_context_status == VIDEO_CONTEXT_STATUS_OK) {
-    //     video_context_status =
-    //         video_reader_open_file(&video_context, "0:/output.rgb565");
-    // }
     /* USER CODE END 2 */
 
     /* Create the mutex(es) */
@@ -407,10 +387,7 @@ static void MX_GPIO_Init(void) {
 /* USER CODE END Header_StartVideoTask */
 void StartVideoTask(void const *argument) {
     /* USER CODE BEGIN 5 */
-    /* Infinite loop */
-    for (;;) {
-        osDelay(1);
-    }
+    video_task_run(argument);
     /* USER CODE END 5 */
 }
 
@@ -423,10 +400,7 @@ void StartVideoTask(void const *argument) {
 /* USER CODE END Header_StartSdTask */
 void StartSdTask(void const *argument) {
     /* USER CODE BEGIN StartSdTask */
-    /* Infinite loop */
-    for (;;) {
-        osDelay(1);
-    }
+    sd_task_run(argument);
     /* USER CODE END StartSdTask */
 }
 
@@ -439,10 +413,7 @@ void StartSdTask(void const *argument) {
 /* USER CODE END Header_StartLcdTask */
 void StartLcdTask(void const *argument) {
     /* USER CODE BEGIN StartLcdTask */
-    /* Infinite loop */
-    for (;;) {
-        osDelay(1);
-    }
+    lcd_task_run(argument);
     /* USER CODE END StartLcdTask */
 }
 
