@@ -3,7 +3,7 @@
 #include "cmsis_os.h"
 #include "main.h"
 
-void sd_task_run(void const *argument) {
+void video_reader_task_run(void const *argument) {
     video_reader_task_config_t *config = (video_reader_task_config_t *)argument;
 
     if (config == NULL || config->reader_context == NULL ||

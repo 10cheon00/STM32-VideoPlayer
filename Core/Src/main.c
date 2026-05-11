@@ -56,12 +56,15 @@ DMA_HandleTypeDef hdma_spi1_tx;
 
 osThreadId VideoPlayerTaskHandle;
 osThreadId VideoReaderTaskHandle;
-osMessageQId frameBufferQueueHandle;
+osMessageQId frameBufferPointerQueueHandle;
+uint8_t frameBufferPointerQueueBuffer[4 * sizeof(uint32_t)];
+osStaticMessageQDef_t frameBufferPointerQueueControlBlock;
 osMutexId ioMutexHandle;
 osSemaphoreId lcdDmaDoneSemHandle;
 osSemaphoreId sdReadDoneSemHandle;
 /* USER CODE BEGIN PV */
 
+st7789_handle_t st7789_handle;
 video_reader_context_t video_reader_context;
 video_player_context_t video_player_context;
 video_shared_context_t video_shared_context;
@@ -153,10 +156,12 @@ int main(void) {
     /* USER CODE END RTOS_TIMERS */
 
     /* Create the queue(s) */
-    /* definition and creation of frameBufferQueue */
-    osMessageQDef(frameBufferQueue, 4, uint16_t);
-    frameBufferQueueHandle =
-        osMessageCreate(osMessageQ(frameBufferQueue), NULL);
+    /* definition and creation of frameBufferPointerQueue */
+    osMessageQStaticDef(frameBufferPointerQueue, 4, uint32_t,
+                        frameBufferPointerQueueBuffer,
+                        &frameBufferPointerQueueControlBlock);
+    frameBufferPointerQueueHandle =
+        osMessageCreate(osMessageQ(frameBufferPointerQueue), NULL);
 
     /* USER CODE BEGIN RTOS_QUEUES */
     /* add queues, ... */
@@ -166,28 +171,12 @@ int main(void) {
     /* definition and creation of VideoPlayerTask */
     osThreadDef(VideoPlayerTask, StartVideoPlayerTask, osPriorityNormal, 0,
                 512);
-    video_player_task_config.player_context = &video_player_context;
-    video_player_task_config.shared_context = &video_shared_context;
-    video_player_task_config.target_frame_rate = 30;
-    video_player_task_config.frameBufferQueueHandle = frameBufferQueueHandle;
-    video_player_task_config.ioMutexHandle = ioMutexHandle;
-    video_player_task_config.lcdDmaDoneSemHandle = lcdDmaDoneSemHandle;
-    video_player_task_config.sdReadDoneSemHandle = sdReadDoneSemHandle;
     VideoPlayerTaskHandle = osThreadCreate(osThread(VideoPlayerTask),
                                            (void *)&video_player_task_config);
 
     /* definition and creation of VideoReaderTask */
     osThreadDef(VideoReaderTask, StartVideoReaderTask, osPriorityAboveNormal, 0,
                 1024);
-    video_reader_task_config.reader_context = &video_reader_context;
-    video_reader_task_config.shared_context = &video_shared_context;
-    video_reader_task_config.sd_fatfs = &SDFatFS;
-    video_reader_task_config.hsd = &hsd;
-    video_reader_task_config.sd_path = SDPath;
-    video_reader_task_config.file_path = video_file_path;
-    video_reader_task_config.frameBufferQueueHandle = frameBufferQueueHandle;
-    video_reader_task_config.ioMutexHandle = ioMutexHandle;
-    video_reader_task_config.sdReadDoneSemHandle = sdReadDoneSemHandle;
     VideoReaderTaskHandle = osThreadCreate(osThread(VideoReaderTask),
                                            (void *)&video_reader_task_config);
 
@@ -398,7 +387,7 @@ static void MX_GPIO_Init(void) {
 /* USER CODE END Header_StartVideoPlayerTask */
 void StartVideoPlayerTask(void const *argument) {
     /* USER CODE BEGIN 5 */
-    video_task_run(argument);
+    video_player_task_run(argument);
     /* USER CODE END 5 */
 }
 
@@ -411,7 +400,7 @@ void StartVideoPlayerTask(void const *argument) {
 /* USER CODE END Header_StartVideoReaderTask */
 void StartVideoReaderTask(void const *argument) {
     /* USER CODE BEGIN StartVideoReaderTask */
-    sd_task_run(argument);
+    video_reader_task_run(argument);
     /* USER CODE END StartVideoReaderTask */
 }
 
