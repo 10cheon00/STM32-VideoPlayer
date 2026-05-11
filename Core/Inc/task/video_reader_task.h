@@ -27,6 +27,7 @@ typedef struct {
     video_shared_context_t *shared_context;
     FATFS *sd_fatfs;
     SD_HandleTypeDef *hsd;
+    DWORD frame_bytes;
     const TCHAR *sd_path;
     const TCHAR *file_path;
     osMessageQId frameBufferQueueHandle;

@@ -141,7 +141,7 @@ int main(void) {
     /* Create the semaphores(s) */
     /* definition and creation of lcdDmaDoneSem */
     osSemaphoreDef(lcdDmaDoneSem);
-    lcdDmaDoneSemHandle = osSemaphoreCreate(osSemaphore(lcdDmaDoneSem), 1);
+    lcdDmaDoneSemHandle = osSemaphoreCreate(osSemaphore(lcdDmaDoneSem), 0);
 
     /* definition and creation of sdReadDoneSem */
     osSemaphoreDef(sdReadDoneSem);
@@ -171,12 +171,43 @@ int main(void) {
     /* definition and creation of VideoPlayerTask */
     osThreadDef(VideoPlayerTask, StartVideoPlayerTask, osPriorityNormal, 0,
                 512);
+    video_player_task_config.player_context = &video_player_context;
+    video_player_task_config.shared_context = &video_shared_context;
+    video_player_task_config.st7789_handle = &st7789_handle;
+    video_player_task_config.hspi = &hspi1;
+    video_player_task_config.GPIO_Port_CS = LCD_CS_GPIO_Port;
+    video_player_task_config.GPIO_Port_DC = LCD_DC_GPIO_Port;
+    video_player_task_config.GPIO_Port_RST = LCD_RST_GPIO_Port;
+    video_player_task_config.GPIO_Pin_CS = LCD_CS_Pin;
+    video_player_task_config.GPIO_Pin_DC = LCD_DC_Pin;
+    video_player_task_config.GPIO_Pin_RST = LCD_RST_Pin;
+    video_player_task_config.screen_width = 240;
+    video_player_task_config.screen_height = 240;
+    video_player_task_config.dma_status = ST7789_DMA_ENABLE;
+    video_player_task_config.target_frame_rate = 30;
+    video_player_task_config.frameBufferQueueHandle =
+        frameBufferPointerQueueHandle;
+    video_player_task_config.ioMutexHandle = ioMutexHandle;
+    video_player_task_config.lcdDmaDoneSemHandle = lcdDmaDoneSemHandle;
+    video_player_task_config.sdReadDoneSemHandle = sdReadDoneSemHandle;
     VideoPlayerTaskHandle = osThreadCreate(osThread(VideoPlayerTask),
                                            (void *)&video_player_task_config);
 
     /* definition and creation of VideoReaderTask */
     osThreadDef(VideoReaderTask, StartVideoReaderTask, osPriorityAboveNormal, 0,
                 1024);
+    video_reader_task_config.reader_context = &video_reader_context;
+    video_reader_task_config.shared_context = &video_shared_context;
+    video_reader_task_config.sd_fatfs = &SDFatFS;
+    video_reader_task_config.hsd = &hsd;
+    video_reader_task_config.frame_bytes =
+        240U * 240U * sizeof(video_buffer_t);
+    video_reader_task_config.sd_path = SDPath;
+    video_reader_task_config.file_path = video_file_path;
+    video_reader_task_config.frameBufferQueueHandle =
+        frameBufferPointerQueueHandle;
+    video_reader_task_config.ioMutexHandle = ioMutexHandle;
+    video_reader_task_config.sdReadDoneSemHandle = sdReadDoneSemHandle;
     VideoReaderTaskHandle = osThreadCreate(osThread(VideoReaderTask),
                                            (void *)&video_reader_task_config);
 

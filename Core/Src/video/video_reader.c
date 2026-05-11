@@ -1,7 +1,11 @@
 #include "video/video_reader.h"
 
+static video_buffer_t first_buffer[VIDEO_CONTEXT_BUFFER_SIZE];
+static video_buffer_t second_buffer[VIDEO_CONTEXT_BUFFER_SIZE];
+
 static void
-video_context_switch_buffer_address(video_shared_context_t *shared_context);
+video_context_switch_buffer_address(video_reader_context_t *reader_context,
+                                    video_shared_context_t *shared_context);
 static uint8_t
 video_context_is_reached_end_of_file(video_reader_context_t *reader_context);
 static video_context_status_t video_context_read_restart_from_beginning(
@@ -9,10 +13,15 @@ static video_context_status_t video_context_read_restart_from_beginning(
     video_shared_context_t *shared_context);
 
 void video_reader_init(video_reader_context_t *reader_context,
+                       DWORD frame_bytes,
                        FATFS *sd_fatfs,
                        SD_HandleTypeDef *hsd) {
     reader_context->sd_fatfs = sd_fatfs;
     reader_context->hsd = hsd;
+    reader_context->frame_bytes = frame_bytes;
+    reader_context->first_buffer = first_buffer;
+    reader_context->second_buffer = second_buffer;
+    reader_context->use_first_buffer = 0;
     reader_context->bytes_read = 0;
     reader_context->file_bytes = 0;
     reader_context->max_frame_index = 0;
@@ -31,7 +40,6 @@ video_context_status_t video_reader_mount(video_reader_context_t *reader_context
 
 video_context_status_t
 video_reader_open_file(video_reader_context_t *reader_context,
-                       video_shared_context_t *shared_context,
                        const TCHAR *file_path) {
     video_context_status_t status = VIDEO_CONTEXT_STATUS_OK;
 
@@ -42,7 +50,7 @@ video_reader_open_file(video_reader_context_t *reader_context,
     if (status == VIDEO_CONTEXT_STATUS_OK) {
         reader_context->file_bytes = f_size(&reader_context->file);
         reader_context->max_frame_index =
-            reader_context->file_bytes / shared_context->frame_bytes;
+            reader_context->file_bytes / reader_context->frame_bytes;
     }
     return status;
 }
@@ -61,9 +69,11 @@ video_reader_read_file(video_reader_context_t *reader_context,
                        video_shared_context_t *shared_context) {
     video_context_status_t status = VIDEO_CONTEXT_STATUS_OK;
 
-    video_context_switch_buffer_address(shared_context);
+    video_context_switch_buffer_address(reader_context, shared_context);
     FRESULT fresult =
-        f_read(&reader_context->file, shared_context->buffer,
+        f_read(&reader_context->file,
+               reader_context->use_first_buffer ? reader_context->first_buffer
+                                                : reader_context->second_buffer,
                VIDEO_CONTEXT_BUFFER_SIZE * sizeof(video_buffer_t),
                &reader_context->bytes_read);
     if (fresult == FR_OK) {
@@ -83,14 +93,10 @@ video_reader_read_file(video_reader_context_t *reader_context,
 }
 
 static void
-video_context_switch_buffer_address(video_shared_context_t *shared_context) {
-    shared_context->use_first_buffer = !shared_context->use_first_buffer;
-
-    if (shared_context->use_first_buffer) {
-        shared_context->buffer = shared_context->first_buffer;
-    } else {
-        shared_context->buffer = shared_context->second_buffer;
-    }
+video_context_switch_buffer_address(video_reader_context_t *reader_context,
+                                    video_shared_context_t *shared_context) {
+    reader_context->use_first_buffer = !reader_context->use_first_buffer;
+    (void)shared_context;
 }
 
 static uint8_t
@@ -106,9 +112,11 @@ static video_context_status_t video_context_read_restart_from_beginning(
 
     if (fresult == FR_OK) {
         shared_context->total_bytes_read = 0;
-        shared_context->next_frame_start_byte = shared_context->frame_bytes;
+        shared_context->next_frame_start_byte = reader_context->frame_bytes;
         fresult =
-            f_read(&reader_context->file, shared_context->buffer,
+            f_read(&reader_context->file,
+                   reader_context->use_first_buffer ? reader_context->first_buffer
+                                                    : reader_context->second_buffer,
                    VIDEO_CONTEXT_BUFFER_SIZE * sizeof(video_buffer_t),
                    &reader_context->bytes_read);
         if (fresult == FR_OK) {
