@@ -64,9 +64,7 @@ osSemaphoreId lcdDmaDoneSemHandle;
 osSemaphoreId sdReadDoneSemHandle;
 /* USER CODE BEGIN PV */
 
-st7789_handle_t st7789_handle;
-video_context_t video_context;
-video_context_status_t video_context_status;
+lcd_task_config_t lcd_task_config;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -80,11 +78,6 @@ void StartSdTask(void const *argument);
 void StartLcdTask(void const *argument);
 
 /* USER CODE BEGIN PFP */
-void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
-    if (hspi->Instance == SPI1) {
-        st7789_dma_tx_cplt_callback(&st7789_handle);
-    }
-}
 
 /* USER CODE END PFP */
 
@@ -178,7 +171,18 @@ int main(void) {
 
     /* definition and creation of LcdTask */
     osThreadDef(LcdTask, StartLcdTask, osPriorityAboveNormal, 0, 1024);
-    LcdTaskHandle = osThreadCreate(osThread(LcdTask), NULL);
+    lcd_task_config.hspi = &hspi1;
+    lcd_task_config.GPIO_Port_CS = LCD_CS_GPIO_Port;
+    lcd_task_config.GPIO_Port_DC = LCD_DC_GPIO_Port;
+    lcd_task_config.GPIO_Port_RST = LCD_RST_GPIO_Port;
+    lcd_task_config.GPIO_Pin_CS = LCD_CS_Pin;
+    lcd_task_config.GPIO_Pin_DC = LCD_DC_Pin;
+    lcd_task_config.GPIO_Pin_RST = LCD_RST_Pin;
+    lcd_task_config.screen_width = 240;
+    lcd_task_config.screen_height = 240;
+    lcd_task_config.dma_status = ST7789_DMA_ENABLE;
+    LcdTaskHandle =
+        osThreadCreate(osThread(LcdTask), &lcd_task_config);
 
     /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
