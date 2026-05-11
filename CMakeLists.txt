@@ -46,12 +46,11 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_SOURCE_DIR}/Core/Src/lcd/st7789.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/task/lcd_task.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/task/sd_task.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/task/video_task.c
     ${CMAKE_SOURCE_DIR}/Core/Src/video/video_reader.c
     ${CMAKE_SOURCE_DIR}/Core/Src/video/video_context.c
     ${CMAKE_SOURCE_DIR}/Core/Src/video/video_player.c 
+    ${CMAKE_SOURCE_DIR}/Core/Src/task/video_player_task.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/task/video_reader_task.c
     ${CMAKE_SOURCE_DIR}/Core/Src/error_handler.c
 )
 

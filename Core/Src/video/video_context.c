@@ -1,54 +1,32 @@
-#include "video_context.h"
+#include "video/video_context.h"
+
+#include "video/video_player.h"
 
 static video_buffer_t first_buffer[VIDEO_CONTEXT_BUFFER_SIZE];
 static video_buffer_t second_buffer[VIDEO_CONTEXT_BUFFER_SIZE];
 
-static void video_context_update_video_meta_data(video_context_t *context);
 static void
-video_context_calculate_current_frame_rate(video_context_t *context);
-static void video_context_calculate_next_frame_tick(video_context_t *context);
+video_context_update_video_meta_data(video_player_context_t *player_context,
+                                     video_shared_context_t *shared_context);
+static void video_context_calculate_current_frame_rate(
+    video_player_context_t *player_context);
 static void
-video_context_update_next_frame_start_byte(video_context_t *context);
-static uint8_t video_context_is_frame_print_complete(video_context_t *context);
-static uint8_t
-video_context_is_next_frame_deadline_missed(video_context_t *context);
+video_context_calculate_next_frame_tick(video_player_context_t *player_context);
+static void
+video_context_update_next_frame_start_byte(video_shared_context_t *shared_context);
+static uint8_t video_context_is_frame_print_complete(
+    video_shared_context_t *shared_context);
+static uint8_t video_context_is_next_frame_deadline_missed(
+    video_player_context_t *player_context);
 
-video_context_status_t video_context_init(video_context_t *context,
-                                          FATFS *sd_fatfs,
-                                          SD_HandleTypeDef *hsd,
-                                          st7789_handle_t *st7789_handle,
-                                          uint32_t target_frame_rate) {
-    video_context_status_t status = VIDEO_CONTEXT_STATUS_OK;
-
-    context->sd_fatfs = sd_fatfs;
-    context->hsd = hsd;
-    context->use_first_buffer = 0;
-    context->first_buffer = first_buffer;
-    context->second_buffer = second_buffer;
-    context->buffer = context->first_buffer;
-
-    context->st7789_handle = st7789_handle;
-    context->sx = 0;
-    context->sy = 0;
-    context->ex = context->st7789_handle->screen_width;
-    context->ey = VIDEO_CONTEXT_CHUNK_OFFSET;
-
-    context->last_tick = HAL_GetTick();
-    context->current_frame_rate = 0;
-    context->target_frame_rate = target_frame_rate;
-    context->bytes_read = 0;
-    context->file_bytes = 0;
-    context->frame_bytes = 0;
-    context->total_bytes_read = 0;
-    context->next_frame_start_byte = 0;
-    context->deadline_missed_count = 0;
-
-    context->max_frame_index = 0;
-
-    if (st7789_init_display(context->st7789_handle) != ST7789_STATUS_OK) {
-        status = VIDEO_CONTEXT_STATUS_FAILED_TO_INIT_DISPLAY;
-    }
-    return status;
+void video_context_init(video_shared_context_t *shared_context) {
+    shared_context->use_first_buffer = 0;
+    shared_context->first_buffer = first_buffer;
+    shared_context->second_buffer = second_buffer;
+    shared_context->buffer = shared_context->first_buffer;
+    shared_context->frame_bytes = 0;
+    shared_context->total_bytes_read = 0;
+    shared_context->next_frame_start_byte = 0;
 }
 
 /**
@@ -59,78 +37,79 @@ video_context_status_t video_context_init(video_context_t *context,
  * 강제로 DMA나 SDIO가 실행중이라면 대기하는 제약사항을 걸었음
  *
  */
-void video_context_wait_for_dma_and_sdio_idle(video_context_t *context) {
-
-    while (!(context->st7789_handle->is_dma_tx_done))
+void video_context_wait_for_dma_and_sdio_idle(
+    video_player_context_t *player_context) {
+    while (!(player_context->st7789_handle->is_dma_tx_done))
         ;
 }
 
-void video_context_step_next_range(video_context_t *context) {
-    context->sy += VIDEO_CONTEXT_CHUNK_OFFSET;
-    context->ey += VIDEO_CONTEXT_CHUNK_OFFSET;
-    if (context->ey > context->st7789_handle->screen_height) {
-        context->sy = 0;
-        context->ey = VIDEO_CONTEXT_CHUNK_OFFSET;
+void video_context_step_next_range(video_player_context_t *player_context) {
+    player_context->sy += VIDEO_CONTEXT_CHUNK_OFFSET;
+    player_context->ey += VIDEO_CONTEXT_CHUNK_OFFSET;
+    if (player_context->ey > player_context->st7789_handle->screen_height) {
+        player_context->sy = 0;
+        player_context->ey = VIDEO_CONTEXT_CHUNK_OFFSET;
     }
 }
 
-static void video_context_update_video_meta_data(video_context_t *context) {
-    video_context_calculate_current_frame_rate(context);
-    video_context_calculate_next_frame_tick(context);
-    video_context_update_next_frame_start_byte(context);
+static void
+video_context_update_video_meta_data(video_player_context_t *player_context,
+                                     video_shared_context_t *shared_context) {
+    video_context_calculate_current_frame_rate(player_context);
+    video_context_calculate_next_frame_tick(player_context);
+    video_context_update_next_frame_start_byte(shared_context);
 }
 
-static void
-video_context_calculate_current_frame_rate(video_context_t *context) {
-    // 프레임레이트 계산
-    // 1초동안 보낸 프레임 개수...는 정수 단위임
-    // 프레임 시간차 : 1 = 1000 : 프레임 레이트
-    // 프레임 레이트 * 1000 = 1000000 / 프레임 시간차
+static void video_context_calculate_current_frame_rate(
+    video_player_context_t *player_context) {
     uint32_t tick = HAL_GetTick();
-    uint32_t tick_diff = tick - context->last_tick;
+    uint32_t tick_diff = tick - player_context->last_tick;
 
-    context->last_tick = tick;
+    player_context->last_tick = tick;
     if (tick_diff > 0) {
-        context->current_frame_rate = 1000000U / tick_diff;
+        player_context->current_frame_rate = 1000000U / tick_diff;
     }
 }
 
-static void video_context_calculate_next_frame_tick(video_context_t *context) {
-    context->next_frame_tick =
-        HAL_GetTick() + 1000U / context->target_frame_rate;
+static void
+video_context_calculate_next_frame_tick(video_player_context_t *player_context) {
+    player_context->next_frame_tick =
+        HAL_GetTick() + 1000U / player_context->target_frame_rate;
 }
 
 static void
-video_context_update_next_frame_start_byte(video_context_t *context) {
-    context->next_frame_start_byte =
-        context->total_bytes_read + context->frame_bytes;
+video_context_update_next_frame_start_byte(video_shared_context_t *shared_context) {
+    shared_context->next_frame_start_byte =
+        shared_context->total_bytes_read + shared_context->frame_bytes;
 }
 
 video_context_status_t
-video_context_process_frame_timing(video_context_t *context) {
+video_context_process_frame_timing(video_player_context_t *player_context,
+                                   video_shared_context_t *shared_context) {
     video_context_status_t status = VIDEO_CONTEXT_STATUS_OK;
 
-    if (video_context_is_frame_print_complete(context)) {
-        //
-        while (HAL_GetTick() < context->next_frame_tick)
+    if (video_context_is_frame_print_complete(shared_context)) {
+        while (HAL_GetTick() < player_context->next_frame_tick)
             ;
-        video_context_update_video_meta_data(context);
+        video_context_update_video_meta_data(player_context, shared_context);
     }
 
-    if (video_context_is_next_frame_deadline_missed(context)) {
-        context->deadline_missed_count++;
-        if (context->deadline_missed_count > 10) {
+    if (video_context_is_next_frame_deadline_missed(player_context)) {
+        player_context->deadline_missed_count++;
+        if (player_context->deadline_missed_count > 10) {
             status = VIDEO_CONTEXT_STATUS_FAILED_TO_PROCESS_TIMING;
         }
     }
     return status;
 }
 
-static uint8_t video_context_is_frame_print_complete(video_context_t *context) {
-    return context->total_bytes_read >= context->next_frame_start_byte;
+static uint8_t
+video_context_is_frame_print_complete(video_shared_context_t *shared_context) {
+    return shared_context->total_bytes_read >=
+           shared_context->next_frame_start_byte;
 }
 
-static uint8_t
-video_context_is_next_frame_deadline_missed(video_context_t *context) {
-    return HAL_GetTick() >= context->next_frame_tick;
+static uint8_t video_context_is_next_frame_deadline_missed(
+    video_player_context_t *player_context) {
+    return HAL_GetTick() >= player_context->next_frame_tick;
 }

@@ -26,9 +26,8 @@
 #include "stm32f4xx_hal.h"
 
 #include "lcd/st7789.h"
-#include "task/lcd_task.h"
-#include "task/sd_task.h"
-#include "task/video_task.h"
+#include "task/video_player_task.h"
+#include "task/video_reader_task.h"
 #include "video/video_player.h"
 #include "video/video_reader.h"
 
@@ -55,16 +54,20 @@ SD_HandleTypeDef hsd;
 SPI_HandleTypeDef hspi1;
 DMA_HandleTypeDef hdma_spi1_tx;
 
-osThreadId VideoTaskHandle;
-osThreadId SdTaskHandle;
-osThreadId LcdTaskHandle;
+osThreadId VideoPlayerTaskHandle;
+osThreadId VideoReaderTaskHandle;
 osMessageQId frameBufferQueueHandle;
 osMutexId ioMutexHandle;
 osSemaphoreId lcdDmaDoneSemHandle;
 osSemaphoreId sdReadDoneSemHandle;
 /* USER CODE BEGIN PV */
 
-lcd_task_config_t lcd_task_config;
+video_reader_context_t video_reader_context;
+video_player_context_t video_player_context;
+video_shared_context_t video_shared_context;
+video_reader_task_config_t video_reader_task_config;
+video_player_task_config_t video_player_task_config;
+static const TCHAR *video_file_path = "0:/video.rgb565";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -73,9 +76,8 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SDIO_SD_Init(void);
-void StartVideoTask(void const *argument);
-void StartSdTask(void const *argument);
-void StartLcdTask(void const *argument);
+void StartVideoPlayerTask(void const *argument);
+void StartVideoReaderTask(void const *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -161,28 +163,33 @@ int main(void) {
     /* USER CODE END RTOS_QUEUES */
 
     /* Create the thread(s) */
-    /* definition and creation of VideoTask */
-    osThreadDef(VideoTask, StartVideoTask, osPriorityNormal, 0, 512);
-    VideoTaskHandle = osThreadCreate(osThread(VideoTask), NULL);
+    /* definition and creation of VideoPlayerTask */
+    osThreadDef(VideoPlayerTask, StartVideoPlayerTask, osPriorityNormal, 0,
+                512);
+    video_player_task_config.player_context = &video_player_context;
+    video_player_task_config.shared_context = &video_shared_context;
+    video_player_task_config.target_frame_rate = 30;
+    video_player_task_config.frameBufferQueueHandle = frameBufferQueueHandle;
+    video_player_task_config.ioMutexHandle = ioMutexHandle;
+    video_player_task_config.lcdDmaDoneSemHandle = lcdDmaDoneSemHandle;
+    video_player_task_config.sdReadDoneSemHandle = sdReadDoneSemHandle;
+    VideoPlayerTaskHandle = osThreadCreate(osThread(VideoPlayerTask),
+                                           (void *)&video_player_task_config);
 
-    /* definition and creation of SdTask */
-    osThreadDef(SdTask, StartSdTask, osPriorityAboveNormal, 0, 1024);
-    SdTaskHandle = osThreadCreate(osThread(SdTask), NULL);
-
-    /* definition and creation of LcdTask */
-    osThreadDef(LcdTask, StartLcdTask, osPriorityAboveNormal, 0, 1024);
-    lcd_task_config.hspi = &hspi1;
-    lcd_task_config.GPIO_Port_CS = LCD_CS_GPIO_Port;
-    lcd_task_config.GPIO_Port_DC = LCD_DC_GPIO_Port;
-    lcd_task_config.GPIO_Port_RST = LCD_RST_GPIO_Port;
-    lcd_task_config.GPIO_Pin_CS = LCD_CS_Pin;
-    lcd_task_config.GPIO_Pin_DC = LCD_DC_Pin;
-    lcd_task_config.GPIO_Pin_RST = LCD_RST_Pin;
-    lcd_task_config.screen_width = 240;
-    lcd_task_config.screen_height = 240;
-    lcd_task_config.dma_status = ST7789_DMA_ENABLE;
-    LcdTaskHandle =
-        osThreadCreate(osThread(LcdTask), &lcd_task_config);
+    /* definition and creation of VideoReaderTask */
+    osThreadDef(VideoReaderTask, StartVideoReaderTask, osPriorityAboveNormal, 0,
+                1024);
+    video_reader_task_config.reader_context = &video_reader_context;
+    video_reader_task_config.shared_context = &video_shared_context;
+    video_reader_task_config.sd_fatfs = &SDFatFS;
+    video_reader_task_config.hsd = &hsd;
+    video_reader_task_config.sd_path = SDPath;
+    video_reader_task_config.file_path = video_file_path;
+    video_reader_task_config.frameBufferQueueHandle = frameBufferQueueHandle;
+    video_reader_task_config.ioMutexHandle = ioMutexHandle;
+    video_reader_task_config.sdReadDoneSemHandle = sdReadDoneSemHandle;
+    VideoReaderTaskHandle = osThreadCreate(osThread(VideoReaderTask),
+                                           (void *)&video_reader_task_config);
 
     /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
@@ -199,8 +206,8 @@ int main(void) {
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
-        /* USER CODE END 3 */
     }
+    /* USER CODE END 3 */
 }
 
 /**
@@ -216,8 +223,8 @@ void SystemClock_Config(void) {
     __HAL_RCC_PWR_CLK_ENABLE();
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-    /** Initializes the RCC Oscillators according to the specified
-     * parameters in the RCC_OscInitTypeDef structure.
+    /** Initializes the RCC Oscillators according to the specified parameters
+     * in the RCC_OscInitTypeDef structure.
      */
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
     RCC_OscInitStruct.HSIState = RCC_HSI_ON;
@@ -382,50 +389,37 @@ static void MX_GPIO_Init(void) {
 
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartVideoTask */
+/* USER CODE BEGIN Header_StartVideoPlayerTask */
 /**
- * @brief  Function implementing the VideoTask thread.
+ * @brief  Function implementing the VideoPlayerTask thread.
  * @param  argument: Not used
  * @retval None
  */
-/* USER CODE END Header_StartVideoTask */
-void StartVideoTask(void const *argument) {
+/* USER CODE END Header_StartVideoPlayerTask */
+void StartVideoPlayerTask(void const *argument) {
     /* USER CODE BEGIN 5 */
     video_task_run(argument);
     /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_StartSdTask */
+/* USER CODE BEGIN Header_StartVideoReaderTask */
 /**
- * @brief Function implementing the SdTask thread.
+ * @brief Function implementing the VideoReaderTask thread.
  * @param argument: Not used
  * @retval None
  */
-/* USER CODE END Header_StartSdTask */
-void StartSdTask(void const *argument) {
-    /* USER CODE BEGIN StartSdTask */
+/* USER CODE END Header_StartVideoReaderTask */
+void StartVideoReaderTask(void const *argument) {
+    /* USER CODE BEGIN StartVideoReaderTask */
     sd_task_run(argument);
-    /* USER CODE END StartSdTask */
-}
-
-/* USER CODE BEGIN Header_StartLcdTask */
-/**
- * @brief Function implementing the LcdTask thread.
- * @param argument: Not used
- * @retval None
- */
-/* USER CODE END Header_StartLcdTask */
-void StartLcdTask(void const *argument) {
-    /* USER CODE BEGIN StartLcdTask */
-    lcd_task_run(argument);
-    /* USER CODE END StartLcdTask */
+    /* USER CODE END StartVideoReaderTask */
 }
 
 /**
  * @brief  Period elapsed callback in non blocking mode
  * @note   This function is called  when TIM5 interrupt took place, inside
- * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to
- * increment a global variable "uwTick" used as application time base.
+ * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+ * a global variable "uwTick" used as application time base.
  * @param  htim : TIM handle
  * @retval None
  */
