@@ -8,7 +8,7 @@
 typedef uint16_t video_buffer_t;
 
 #define VIDEO_CONTEXT_LINE_LENGTH 240
-#define VIDEO_CONTEXT_CHUNK_OFFSET 16
+#define VIDEO_CONTEXT_CHUNK_OFFSET 2
 #define VIDEO_CONTEXT_BUFFER_SIZE                                              \
     (VIDEO_CONTEXT_LINE_LENGTH * VIDEO_CONTEXT_CHUNK_OFFSET)
 

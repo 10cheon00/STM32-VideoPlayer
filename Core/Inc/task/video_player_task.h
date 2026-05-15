@@ -28,7 +28,6 @@
 typedef struct {
     video_player_context_t *player_context;
     video_shared_context_t *shared_context;
-    st7789_handle_t *st7789_handle;
     SPI_HandleTypeDef *hspi;
     GPIO_TypeDef *GPIO_Port_CS;
     GPIO_TypeDef *GPIO_Port_DC;

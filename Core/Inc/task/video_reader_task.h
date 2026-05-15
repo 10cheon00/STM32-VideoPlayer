@@ -33,6 +33,7 @@ typedef struct {
     osMessageQId frameBufferQueueHandle;
     osMutexId ioMutexHandle;
     osSemaphoreId sdReadDoneSemHandle;
+    osSemaphoreId lcdDmaDoneSemHandle;
 } video_reader_task_config_t;
 
 void video_reader_task_run(void const *argument);
