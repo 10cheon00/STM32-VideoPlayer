@@ -15,16 +15,14 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
 
 void video_player_task_run(void const *argument) {
     video_player_task_config_t *config = (video_player_task_config_t *)argument;
-    osEvent frame_buffer_event;
     video_buffer_t *buffer = NULL;
 
     if (config == NULL || config->player_context == NULL ||
         config->shared_context == NULL || config->hspi == NULL ||
         config->GPIO_Port_CS == NULL || config->GPIO_Port_DC == NULL ||
         config->GPIO_Port_RST == NULL || config->target_frame_rate == 0 ||
-        config->frameBufferQueueHandle == NULL ||
-        config->ioMutexHandle == NULL || config->lcdDmaDoneSemHandle == NULL ||
-        config->sdReadDoneSemHandle == NULL) {
+        config->writableBufferQueueHandle == NULL ||
+        config->printableBufferQueueHandle == NULL) {
         Error_Handler();
     }
 
@@ -46,21 +44,20 @@ void video_player_task_run(void const *argument) {
         Error_Handler();
     }
 
+    osEvent evnt;
+
     for (;;) {
-        if (osSemaphoreWait(config->lcdDmaDoneSemHandle, osWaitForever) !=
-            osOK) {
-            Error_Handler();
-        }
-        xQueueReceive(config->frameBufferQueueHandle, &buffer, osWaitForever);
+        xQueueReceive(config->printableBufferQueueHandle, &buffer, osWaitForever);
+
         if (video_player_print_video_buffer(config->player_context, buffer) !=
             VIDEO_CONTEXT_STATUS_OK) {
             Error_Handler();
         }
-        while (!is_lcd_dma_done)
-            ;
-        is_lcd_dma_done = 0;
-        if (osSemaphoreRelease(config->sdReadDoneSemHandle) != osOK) {
+        if (video_player_process_frame_timing(config->player_context,
+                                              config->shared_context) !=
+            VIDEO_CONTEXT_STATUS_OK) {
             Error_Handler();
         }
+        xQueueSend(config->writableBufferQueueHandle, &buffer, 0);
     }
 }

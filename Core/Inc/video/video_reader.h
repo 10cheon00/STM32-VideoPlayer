@@ -8,9 +8,6 @@ typedef struct {
     SD_HandleTypeDef *hsd;
     FIL file;
     DWORD frame_bytes;
-    video_buffer_t *first_buffer;
-    video_buffer_t *second_buffer;
-    uint8_t use_first_buffer;
     UINT bytes_read;
     DWORD file_bytes;
     uint32_t max_frame_index;
@@ -32,6 +29,7 @@ video_reader_close_file(video_reader_context_t *reader_context);
 
 video_context_status_t
 video_reader_read_file(video_reader_context_t *reader_context,
-                       video_shared_context_t *shared_context);
+                       video_shared_context_t *shared_context,
+                       video_buffer_t *buffer);
 
 #endif

@@ -13,14 +13,12 @@
  *    허가되었는지 확인한다.
  * 3. 읽기가 허가되면 ioMutexHandle을 획득하여 SDIO와 LCD DMA가 동시에
  *    실행되지 않도록 전역 I/O 접근을 독점한다.
- * 4. video_reader_read_file()로 한 청크(240x16) 분량을 shared buffer에
- *    읽어온다.
- * 5. 읽기가 끝나면 ioMutexHandle을 반납한다.
- * 6. 이번에 채운 버퍼가 first_buffer인지 second_buffer인지에 해당하는
- *    버퍼 인덱스만 frameBufferQueueHandle에 put 하여 video player task에
- *    전달한다.
- * 7. 이후 다시 sdReadDoneSemHandle을 wait 하며, video player task가
- *    현재 버퍼 출력과 DMA 완료 처리를 마칠 때까지 대기한다.
+ * 4. video_reader_read_file()에 큐에서 받은 버퍼 주소를 넘겨 한 청크를
+ *    직접 읽어온다.
+ * 5. 읽기가 끝나면 방금 채운 동일 버퍼 주소를 printable queue로 넘겨
+ *    video player task에 전달한다.
+ * 6. 이후 다시 writable queue를 wait 하며, player가 출력 후 반환한 버퍼가
+ *    올 때까지 대기한다.
  */
 typedef struct {
     video_reader_context_t *reader_context;
@@ -30,10 +28,8 @@ typedef struct {
     DWORD frame_bytes;
     const TCHAR *sd_path;
     const TCHAR *file_path;
-    osMessageQId frameBufferQueueHandle;
-    osMutexId ioMutexHandle;
-    osSemaphoreId sdReadDoneSemHandle;
-    osSemaphoreId lcdDmaDoneSemHandle;
+    osMessageQId printableBufferQueueHandle;
+    osMessageQId writableBufferQueueHandle;
 } video_reader_task_config_t;
 
 void video_reader_task_run(void const *argument);

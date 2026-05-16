@@ -87,7 +87,7 @@ video_player_process_frame_timing(video_player_context_t *player_context,
     if (video_player_is_next_frame_deadline_missed(player_context)) {
         player_context->deadline_missed_count++;
         if (player_context->deadline_missed_count > 10) {
-            status = VIDEO_CONTEXT_STATUS_FAILED_TO_PROCESS_TIMING;
+            // status = VIDEO_CONTEXT_STATUS_FAILED_TO_PROCESS_TIMING;
         }
     }
     return status;

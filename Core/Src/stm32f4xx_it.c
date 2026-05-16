@@ -56,6 +56,7 @@
 
 /* External variables --------------------------------------------------------*/
 extern DMA_HandleTypeDef hdma_sdio_rx;
+extern SD_HandleTypeDef hsd;
 extern DMA_HandleTypeDef hdma_spi1_tx;
 extern TIM_HandleTypeDef htim5;
 
@@ -160,6 +161,20 @@ void DebugMon_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32f4xx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles SDIO global interrupt.
+  */
+void SDIO_IRQHandler(void)
+{
+  /* USER CODE BEGIN SDIO_IRQn 0 */
+
+  /* USER CODE END SDIO_IRQn 0 */
+  HAL_SD_IRQHandler(&hsd);
+  /* USER CODE BEGIN SDIO_IRQn 1 */
+
+  /* USER CODE END SDIO_IRQn 1 */
+}
 
 /**
   * @brief This function handles TIM5 global interrupt.

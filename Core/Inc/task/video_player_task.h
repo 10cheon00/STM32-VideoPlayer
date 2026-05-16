@@ -39,10 +39,8 @@ typedef struct {
     uint16_t screen_height;
     st7789_dma_status_t dma_status;
     uint32_t target_frame_rate;
-    osMessageQId frameBufferQueueHandle;
-    osMutexId ioMutexHandle;
-    osSemaphoreId lcdDmaDoneSemHandle;
-    osSemaphoreId sdReadDoneSemHandle;
+    osMessageQId writableBufferQueueHandle;
+    osMessageQId printableBufferQueueHandle;
 } video_player_task_config_t;
 
 void video_player_task_run(void const *argument);

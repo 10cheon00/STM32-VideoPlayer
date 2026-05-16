@@ -52,6 +52,7 @@ void MemManage_Handler(void);
 void BusFault_Handler(void);
 void UsageFault_Handler(void);
 void DebugMon_Handler(void);
+void SDIO_IRQHandler(void);
 void TIM5_IRQHandler(void);
 void DMA2_Stream2_IRQHandler(void);
 void DMA2_Stream3_IRQHandler(void);
