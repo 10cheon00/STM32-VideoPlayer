@@ -5,6 +5,7 @@
 
 void video_reader_task_run(void const *argument) {
     video_reader_task_config_t *config = (video_reader_task_config_t *)argument;
+    video_buffer_t *buffer = NULL;
 
     if (config == NULL || config->reader_context == NULL ||
         config->shared_context == NULL || config->sd_fatfs == NULL ||
@@ -29,22 +30,16 @@ void video_reader_task_run(void const *argument) {
         VIDEO_CONTEXT_STATUS_OK) {
         Error_Handler();
     }
-
-    uint32_t *buffer = NULL;
-    osEvent evnt;
-    int t = uxQueueMessagesWaiting(config->writableBufferQueueHandle);
     for (;;) {
         xQueueReceive(config->writableBufferQueueHandle, &buffer,
-                      osWaitForever);
-        if (video_reader_read_file(
-                config->reader_context, config->shared_context,
-                (video_buffer_t *)buffer) != VIDEO_CONTEXT_STATUS_OK) {
+                      portMAX_DELAY);
+        if (video_reader_read_file(config->reader_context,
+                                   config->shared_context,
+                                   buffer) != VIDEO_CONTEXT_STATUS_OK) {
             Error_Handler();
         }
-        while (HAL_SD_GetCardState(config->reader_context->hsd) !=
-               HAL_SD_CARD_TRANSFER) {
-            osDelay(1);
+        if (xQueueSend(config->printableBufferQueueHandle, &buffer, portMAX_DELAY) != pdTRUE) {
+            Error_Handler();
         }
-        xQueueSend(config->printableBufferQueueHandle, &buffer, 0);
     }
 }

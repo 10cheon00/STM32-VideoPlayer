@@ -41,6 +41,7 @@ typedef struct {
     uint32_t target_frame_rate;
     osMessageQId writableBufferQueueHandle;
     osMessageQId printableBufferQueueHandle;
+    osThreadId VideoPlayerTaskHandle;
 } video_player_task_config_t;
 
 void video_player_task_run(void const *argument);

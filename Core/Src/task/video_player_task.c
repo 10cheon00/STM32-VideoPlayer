@@ -4,27 +4,38 @@
 #include "main.h"
 
 static st7789_handle_t st7789_handle;
-static uint8_t is_lcd_dma_done = 0;
+static osMessageQId writableBufferQueueHandle;
+static video_buffer_t *buffer = NULL;
+static osThreadId this = 0;
 
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
     if (hspi->Instance == SPI1) {
+        BaseType_t hpw = pdFALSE;
         st7789_dma_tx_cplt_callback(&st7789_handle);
-        is_lcd_dma_done = 1;
+        vTaskNotifyGiveFromISR(this, &hpw);
+        portYIELD_FROM_ISR(hpw);
+    }
+}
+
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
+    if (hspi->Instance == SPI1) {
+        Error_Handler();
     }
 }
 
 void video_player_task_run(void const *argument) {
     video_player_task_config_t *config = (video_player_task_config_t *)argument;
-    video_buffer_t *buffer = NULL;
-
     if (config == NULL || config->player_context == NULL ||
         config->shared_context == NULL || config->hspi == NULL ||
         config->GPIO_Port_CS == NULL || config->GPIO_Port_DC == NULL ||
         config->GPIO_Port_RST == NULL || config->target_frame_rate == 0 ||
         config->writableBufferQueueHandle == NULL ||
-        config->printableBufferQueueHandle == NULL) {
+        config->printableBufferQueueHandle == NULL ||
+        config->VideoPlayerTaskHandle == NULL) {
         Error_Handler();
     }
+    writableBufferQueueHandle = config->writableBufferQueueHandle;
+    this = config->VideoPlayerTaskHandle;
 
     if (st7789_init_handle(
             &st7789_handle, config->hspi, config->GPIO_Port_CS,
@@ -44,10 +55,9 @@ void video_player_task_run(void const *argument) {
         Error_Handler();
     }
 
-    osEvent evnt;
-
     for (;;) {
-        xQueueReceive(config->printableBufferQueueHandle, &buffer, osWaitForever);
+        xQueueReceive(config->printableBufferQueueHandle, &buffer,
+                      portMAX_DELAY);
 
         if (video_player_print_video_buffer(config->player_context, buffer) !=
             VIDEO_CONTEXT_STATUS_OK) {
@@ -58,6 +68,9 @@ void video_player_task_run(void const *argument) {
             VIDEO_CONTEXT_STATUS_OK) {
             Error_Handler();
         }
-        xQueueSend(config->writableBufferQueueHandle, &buffer, 0);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        if (xQueueSend(writableBufferQueueHandle, &buffer, portMAX_DELAY) != pdTRUE) {
+            Error_Handler();
+        }
     }
 }
