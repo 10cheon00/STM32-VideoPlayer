@@ -1,21 +1,39 @@
 #include "video/video_reader.h"
+#include "sd/micro_sd.h"
 
 static uint8_t
 video_context_is_reached_end_of_file(video_reader_context_t *reader_context);
 static video_context_status_t video_context_read_restart_from_beginning(
     video_reader_context_t *reader_context,
-    video_shared_context_t *shared_context,
-    video_buffer_t *buffer);
+    video_shared_context_t *shared_context, video_buffer_t *buffer);
 
-void video_reader_init(video_reader_context_t *reader_context,
-                       DWORD frame_bytes, FATFS *sd_fatfs,
-                       SD_HandleTypeDef *hsd) {
+video_context_status_t
+video_reader_init(video_reader_context_t *reader_context, DWORD frame_bytes,
+                  FATFS *sd_fatfs, SPI_HandleTypeDef *hspi,
+                  GPIO_TypeDef *GPIO_Port_CS, uint16_t GPIO_Pin_CS,
+                  micro_sd_spi_bus_clock_t spi_bus_clock_max) {
+    micro_sd_status_t sd_status = MICRO_SD_STATUS_OK;
+
     reader_context->sd_fatfs = sd_fatfs;
-    reader_context->hsd = hsd;
+    reader_context->hspi = hspi;
     reader_context->frame_bytes = frame_bytes;
     reader_context->bytes_read = 0;
     reader_context->file_bytes = 0;
     reader_context->max_frame_index = 0;
+    reader_context->spi_bus_clock_max = spi_bus_clock_max;
+
+    if ((sd_status = micro_sd_init_handle(
+             &reader_context->sd_handle, reader_context->hspi,
+             reader_context->GPIO_Port_CS, reader_context->GPIO_Pin_CS,
+             reader_context->spi_bus_clock_max)) == MICRO_SD_STATUS_OK) {
+        sd_status = micro_sd_init_card(&reader_context->sd_handle);
+    }
+
+    if (sd_status == MICRO_SD_STATUS_OK) {
+        return VIDEO_CONTEXT_STATUS_OK;
+    } else {
+        return VIDEO_CONTEXT_STATUS_FAILED_TO_MOUNT;
+    }
 }
 
 video_context_status_t
@@ -63,8 +81,7 @@ video_reader_read_file(video_reader_context_t *reader_context,
     video_context_status_t status = VIDEO_CONTEXT_STATUS_OK;
 
     FRESULT fresult = f_read(&reader_context->file, (uint8_t *)buffer,
-                             VIDEO_CONTEXT_BUFFER_SIZE *
-                                 sizeof(video_buffer_t),
+                             VIDEO_CONTEXT_BUFFER_SIZE * sizeof(video_buffer_t),
                              &reader_context->bytes_read);
     if (fresult == FR_OK) {
         shared_context->total_bytes_read += reader_context->bytes_read;
@@ -89,8 +106,7 @@ video_context_is_reached_end_of_file(video_reader_context_t *reader_context) {
 
 static video_context_status_t video_context_read_restart_from_beginning(
     video_reader_context_t *reader_context,
-    video_shared_context_t *shared_context,
-    video_buffer_t *buffer) {
+    video_shared_context_t *shared_context, video_buffer_t *buffer) {
     video_context_status_t status = VIDEO_CONTEXT_STATUS_OK;
     FRESULT fresult = f_lseek(&reader_context->file, 0);
 
@@ -98,8 +114,7 @@ static video_context_status_t video_context_read_restart_from_beginning(
         shared_context->total_bytes_read = 0;
         shared_context->next_frame_start_byte = reader_context->frame_bytes;
         fresult = f_read(&reader_context->file, (uint8_t *)buffer,
-                         VIDEO_CONTEXT_BUFFER_SIZE *
-                             sizeof(video_buffer_t),
+                         VIDEO_CONTEXT_BUFFER_SIZE * sizeof(video_buffer_t),
                          &reader_context->bytes_read);
         if (fresult == FR_OK) {
             shared_context->total_bytes_read += reader_context->bytes_read;

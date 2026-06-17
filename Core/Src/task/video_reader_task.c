@@ -9,8 +9,9 @@ void video_reader_task_run(void const *argument) {
 
     if (config == NULL || config->reader_context == NULL ||
         config->shared_context == NULL || config->sd_fatfs == NULL ||
-        config->hsd == NULL || config->sd_path == NULL ||
-        config->file_path == NULL ||
+        config->hspi == NULL || config->sd_path == NULL ||
+        config->file_path == NULL || config->GPIO_Pin_CS == 0 ||
+        config->GPIO_Port_CS == NULL || config->spi_bus_clock_max == 0 ||
         config->printableBufferQueueHandle == NULL ||
         config->writableBufferQueueHandle == NULL || config->frame_bytes == 0) {
         Error_Handler();
@@ -18,8 +19,12 @@ void video_reader_task_run(void const *argument) {
 
     osDelay(100);
     video_context_init(config->shared_context);
-    video_reader_init(config->reader_context, config->frame_bytes,
-                      config->sd_fatfs, config->hsd);
+    if (video_reader_init(config->reader_context, config->frame_bytes,
+                          config->sd_fatfs, config->hspi, config->GPIO_Port_CS,
+                          config->GPIO_Pin_CS, config->spi_bus_clock_max) !=
+        VIDEO_CONTEXT_STATUS_OK) {
+        Error_Handler();
+    }
 
     if (video_reader_mount(config->reader_context, config->sd_path) !=
         VIDEO_CONTEXT_STATUS_OK) {
@@ -38,7 +43,8 @@ void video_reader_task_run(void const *argument) {
                                    buffer) != VIDEO_CONTEXT_STATUS_OK) {
             Error_Handler();
         }
-        if (xQueueSend(config->printableBufferQueueHandle, &buffer, portMAX_DELAY) != pdTRUE) {
+        if (xQueueSend(config->printableBufferQueueHandle, &buffer,
+                       portMAX_DELAY) != pdTRUE) {
             Error_Handler();
         }
     }

@@ -48,11 +48,10 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-SD_HandleTypeDef hsd;
-DMA_HandleTypeDef hdma_sdio_rx;
-
 SPI_HandleTypeDef hspi1;
+SPI_HandleTypeDef hspi3;
 DMA_HandleTypeDef hdma_spi1_tx;
+DMA_HandleTypeDef hdma_spi3_rx;
 
 osThreadId VideoPlayerTaskHandle;
 osThreadId VideoReaderTaskHandle;
@@ -79,7 +78,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
-static void MX_SDIO_SD_Init(void);
+static void MX_SPI3_Init(void);
 void StartVideoPlayerTask(void const *argument);
 void StartVideoReaderTask(void const *argument);
 
@@ -128,7 +127,7 @@ int main(void) {
     MX_GPIO_Init();
     MX_DMA_Init();
     MX_SPI1_Init();
-    MX_SDIO_SD_Init();
+    MX_SPI3_Init();
     MX_FATFS_Init();
     /* USER CODE BEGIN 2 */
 
@@ -183,11 +182,14 @@ int main(void) {
 
     video_reader_task_config.reader_context = &video_reader_context;
     video_reader_task_config.shared_context = &video_shared_context;
-    video_reader_task_config.sd_fatfs = &SDFatFS;
-    video_reader_task_config.hsd = &hsd;
+    video_reader_task_config.sd_fatfs = &USERFatFS;
     video_reader_task_config.frame_bytes = 240U * 240U * sizeof(video_buffer_t);
-    video_reader_task_config.sd_path = SDPath;
+    video_reader_task_config.sd_path = USERPath;
     video_reader_task_config.file_path = video_file_path;
+    video_reader_task_config.hspi = &hspi3;
+    video_reader_task_config.GPIO_Port_CS = SD_CS_GPIO_Port;
+    video_reader_task_config.GPIO_Pin_CS = SD_CS_Pin;
+    video_reader_task_config.spi_bus_clock_max = HAL_RCC_GetPCLK1Freq(); // TODO: 이거 하드코딩되긴했는데 고쳐야함
     video_reader_task_config.writableBufferQueueHandle =
         writableBufferQueueHandle;
     video_reader_task_config.printableBufferQueueHandle =
@@ -277,32 +279,6 @@ void SystemClock_Config(void) {
 }
 
 /**
- * @brief SDIO Initialization Function
- * @param None
- * @retval None
- */
-static void MX_SDIO_SD_Init(void) {
-
-    /* USER CODE BEGIN SDIO_Init 0 */
-
-    /* USER CODE END SDIO_Init 0 */
-
-    /* USER CODE BEGIN SDIO_Init 1 */
-
-    /* USER CODE END SDIO_Init 1 */
-    hsd.Instance = SDIO;
-    hsd.Init.ClockEdge = SDIO_CLOCK_EDGE_RISING;
-    hsd.Init.ClockBypass = SDIO_CLOCK_BYPASS_DISABLE;
-    hsd.Init.ClockPowerSave = SDIO_CLOCK_POWER_SAVE_DISABLE;
-    hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
-    hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
-    hsd.Init.ClockDiv = 0;
-    /* USER CODE BEGIN SDIO_Init 2 */
-
-    /* USER CODE END SDIO_Init 2 */
-}
-
-/**
  * @brief SPI1 Initialization Function
  * @param None
  * @retval None
@@ -338,20 +314,56 @@ static void MX_SPI1_Init(void) {
 }
 
 /**
+ * @brief SPI3 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_SPI3_Init(void) {
+
+    /* USER CODE BEGIN SPI3_Init 0 */
+
+    /* USER CODE END SPI3_Init 0 */
+
+    /* USER CODE BEGIN SPI3_Init 1 */
+
+    /* USER CODE END SPI3_Init 1 */
+    /* SPI3 parameter configuration*/
+    hspi3.Instance = SPI3;
+    hspi3.Init.Mode = SPI_MODE_MASTER;
+    hspi3.Init.Direction = SPI_DIRECTION_2LINES;
+    hspi3.Init.DataSize = SPI_DATASIZE_8BIT;
+    hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
+    hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
+    hspi3.Init.NSS = SPI_NSS_SOFT;
+    hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+    hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
+    hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
+    hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+    hspi3.Init.CRCPolynomial = 10;
+    if (HAL_SPI_Init(&hspi3) != HAL_OK) {
+        Error_Handler();
+    }
+    /* USER CODE BEGIN SPI3_Init 2 */
+
+    /* USER CODE END SPI3_Init 2 */
+}
+
+/**
  * Enable DMA controller clock
  */
 static void MX_DMA_Init(void) {
 
     /* DMA controller clock enable */
     __HAL_RCC_DMA2_CLK_ENABLE();
+    __HAL_RCC_DMA1_CLK_ENABLE();
 
     /* DMA interrupt init */
+    /* DMA1_Stream0_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
     /* DMA2_Stream2_IRQn interrupt configuration */
     HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
-    /* DMA2_Stream3_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 5, 0);
-    HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
 }
 
 /**
@@ -377,7 +389,7 @@ static void MX_GPIO_Init(void) {
     HAL_GPIO_WritePin(GPIOA, LCD_RST_Pin | LCD_DC_Pin, GPIO_PIN_RESET);
 
     /*Configure GPIO pin Output Level */
-    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, LCD_CS_Pin | SD_CS_Pin, GPIO_PIN_RESET);
 
     /*Configure GPIO pin : PC13 */
     GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -393,18 +405,12 @@ static void MX_GPIO_Init(void) {
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /*Configure GPIO pin : LCD_CS_Pin */
-    GPIO_InitStruct.Pin = LCD_CS_Pin;
+    /*Configure GPIO pins : LCD_CS_Pin SD_CS_Pin */
+    GPIO_InitStruct.Pin = LCD_CS_Pin | SD_CS_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(LCD_CS_GPIO_Port, &GPIO_InitStruct);
-
-    /*Configure GPIO pin : SDIO_Detect_Pin */
-    GPIO_InitStruct.Pin = SDIO_Detect_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    HAL_GPIO_Init(SDIO_Detect_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     /* USER CODE BEGIN MX_GPIO_Init_2 */
 

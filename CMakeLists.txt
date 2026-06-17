@@ -46,6 +46,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_SOURCE_DIR}/Core/Src/lcd/st7789.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/sd/micro_sd.c
     ${CMAKE_SOURCE_DIR}/Core/Src/video/video_reader.c
     ${CMAKE_SOURCE_DIR}/Core/Src/video/video_context.c
     ${CMAKE_SOURCE_DIR}/Core/Src/video/video_player.c 
@@ -58,6 +59,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ${CMAKE_SOURCE_DIR}/Core/Inc/lcd
+    ${CMAKE_SOURCE_DIR}/Core/Inc/sd
     ${CMAKE_SOURCE_DIR}/Core/Inc/task
     ${CMAKE_SOURCE_DIR}/Core/Inc/video
 )

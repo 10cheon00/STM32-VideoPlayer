@@ -24,10 +24,13 @@ typedef struct {
     video_reader_context_t *reader_context;
     video_shared_context_t *shared_context;
     FATFS *sd_fatfs;
-    SD_HandleTypeDef *hsd;
     DWORD frame_bytes;
     const TCHAR *sd_path;
     const TCHAR *file_path;
+    SPI_HandleTypeDef *hspi;
+    micro_sd_spi_bus_clock_t spi_bus_clock_max;
+    GPIO_TypeDef *GPIO_Port_CS;
+    uint16_t GPIO_Pin_CS;
     osMessageQId printableBufferQueueHandle;
     osMessageQId writableBufferQueueHandle;
 } video_reader_task_config_t;
