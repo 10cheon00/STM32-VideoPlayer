@@ -26,6 +26,10 @@ video_reader_init(video_reader_context_t *reader_context, DWORD frame_bytes,
                              GPIO_Pin_CS, spi_bus_clock_max);
 
     if (sd_status == MICRO_SD_STATUS_OK) {
+        sd_status = micro_sd_init_card(&reader_context->sd_handle);
+    }
+
+    if (sd_status == MICRO_SD_STATUS_OK) {
         return VIDEO_CONTEXT_STATUS_OK;
     } else {
         return VIDEO_CONTEXT_STATUS_FAILED_TO_MOUNT;

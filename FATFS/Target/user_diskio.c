@@ -35,6 +35,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include <string.h>
 #include "ff_gen_drv.h"
+#include "sd/micro_sd.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -81,7 +82,16 @@ DSTATUS USER_initialize (
 )
 {
   /* USER CODE BEGIN INIT */
+    micro_sd_handle_t *handle = micro_sd_get_active_handle();
+
     Stat = STA_NOINIT;
+
+    if (pdrv == 0 && handle != NULL) {
+        if (micro_sd_init_card(handle) == MICRO_SD_STATUS_OK) {
+            Stat &= ~STA_NOINIT;
+        }
+    }
+
     return Stat;
   /* USER CODE END INIT */
 }
@@ -96,7 +106,16 @@ DSTATUS USER_status (
 )
 {
   /* USER CODE BEGIN STATUS */
+    micro_sd_handle_t *handle = micro_sd_get_active_handle();
+
     Stat = STA_NOINIT;
+
+    if (pdrv == 0 && handle != NULL) {
+        if (micro_sd_get_status(handle) == MICRO_SD_STATUS_OK) {
+            Stat &= ~STA_NOINIT;
+        }
+    }
+
     return Stat;
   /* USER CODE END STATUS */
 }
@@ -117,7 +136,19 @@ DRESULT USER_read (
 )
 {
   /* USER CODE BEGIN READ */
-    return RES_OK;
+    DRESULT res = RES_ERROR;
+    micro_sd_handle_t *handle = micro_sd_get_active_handle();
+
+    if (buff == NULL || count == 0) {
+        res = RES_PARERR;
+    } else if (pdrv != 0 || handle == NULL) {
+        res = RES_NOTRDY;
+    } else if (micro_sd_read_block(handle, buff, sector, count) ==
+               MICRO_SD_STATUS_OK) {
+        res = RES_OK;
+    }
+
+    return res;
   /* USER CODE END READ */
 }
 
@@ -138,8 +169,19 @@ DRESULT USER_write (
 )
 {
   /* USER CODE BEGIN WRITE */
-  /* USER CODE HERE */
-    return RES_OK;
+    DRESULT res = RES_ERROR;
+    micro_sd_handle_t *handle = micro_sd_get_active_handle();
+
+    if (buff == NULL || count == 0) {
+        res = RES_PARERR;
+    } else if (pdrv != 0 || handle == NULL) {
+        res = RES_NOTRDY;
+    } else if (micro_sd_write_block(handle, (BYTE *)buff, sector, count) ==
+               MICRO_SD_STATUS_OK) {
+        res = RES_OK;
+    }
+
+    return res;
   /* USER CODE END WRITE */
 }
 #endif /* _USE_WRITE == 1 */
@@ -160,6 +202,14 @@ DRESULT USER_ioctl (
 {
   /* USER CODE BEGIN IOCTL */
     DRESULT res = RES_ERROR;
+    micro_sd_handle_t *handle = micro_sd_get_active_handle();
+
+    if (pdrv != 0 || handle == NULL) {
+        res = RES_NOTRDY;
+    } else if (micro_sd_ioctl(handle, cmd, (BYTE *)buff) == MICRO_SD_STATUS_OK) {
+        res = RES_OK;
+    }
+
     return res;
   /* USER CODE END IOCTL */
 }
