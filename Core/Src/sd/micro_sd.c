@@ -87,12 +87,13 @@ static micro_sd_status_t micro_sd_enter_spi_mode(micro_sd_handle_t *handle) {
 
         // 3. 타임아웃될 때까지 응답 확인
         if (status == MICRO_SD_STATUS_OK) {
-            uint8_t dummy = 0xFF, response = 0, retry = 255;
-            uint8_t i = 0;
+            uint8_t dummy = 0xFF, response = 0, response_history[256] = {0};
+            uint8_t retry = 255;
             HAL_StatusTypeDef hal_status;
             do {
                 hal_status = HAL_SPI_TransmitReceive(handle->hspi, &dummy,
                                                      &response, 1, TIMEOUT_MS);
+                response_history[255 - retry] = response;
 
             } while ((response != 0x01) && (--retry));
 
@@ -122,7 +123,7 @@ micro_sd_status_t micro_sd_init_handle(micro_sd_handle_t *handle,
     handle->GPIO_Pin_CS = GPIO_Pin_CS;
     handle->spi_bus_clock_max = spi_bus_clock;
 
-    return MICRO_SD_STATUS_OK;
+    return micro_sd_init_card(handle);
 }
 
 micro_sd_handle_status_t micro_sd_get_handle_status(micro_sd_handle_t *handle) {
@@ -157,8 +158,9 @@ micro_sd_status_t micro_sd_init_card(micro_sd_handle_t *handle) {
     // 3. sd카드의 정보 획득하기
 
     // 4. 낮추었던 spi 클럭 되돌리기
-    status = micro_sd_restore_spi_clock(handle, original_BaudRatePrescaler);
-
+    if (status == MICRO_SD_STATUS_OK) {
+        status = micro_sd_restore_spi_clock(handle, original_BaudRatePrescaler);
+    }
     return status;
 }
 

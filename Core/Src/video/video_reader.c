@@ -15,19 +15,15 @@ video_reader_init(video_reader_context_t *reader_context, DWORD frame_bytes,
     micro_sd_status_t sd_status = MICRO_SD_STATUS_OK;
 
     reader_context->sd_fatfs = sd_fatfs;
-    reader_context->hspi = hspi;
     reader_context->frame_bytes = frame_bytes;
     reader_context->bytes_read = 0;
     reader_context->file_bytes = 0;
     reader_context->max_frame_index = 0;
     reader_context->spi_bus_clock_max = spi_bus_clock_max;
 
-    if ((sd_status = micro_sd_init_handle(
-             &reader_context->sd_handle, reader_context->hspi,
-             reader_context->GPIO_Port_CS, reader_context->GPIO_Pin_CS,
-             reader_context->spi_bus_clock_max)) == MICRO_SD_STATUS_OK) {
-        sd_status = micro_sd_init_card(&reader_context->sd_handle);
-    }
+    sd_status =
+        micro_sd_init_handle(&reader_context->sd_handle, hspi, GPIO_Port_CS,
+                             GPIO_Pin_CS, spi_bus_clock_max);
 
     if (sd_status == MICRO_SD_STATUS_OK) {
         return VIDEO_CONTEXT_STATUS_OK;

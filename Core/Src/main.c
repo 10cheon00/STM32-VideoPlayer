@@ -189,7 +189,8 @@ int main(void) {
     video_reader_task_config.hspi = &hspi3;
     video_reader_task_config.GPIO_Port_CS = SD_CS_GPIO_Port;
     video_reader_task_config.GPIO_Pin_CS = SD_CS_Pin;
-    video_reader_task_config.spi_bus_clock_max = HAL_RCC_GetPCLK1Freq(); // TODO: 이거 하드코딩되긴했는데 고쳐야함
+    video_reader_task_config.spi_bus_clock_max =
+        HAL_RCC_GetPCLK1Freq(); // TODO: 이거 하드코딩되긴했는데 고쳐야함
     video_reader_task_config.writableBufferQueueHandle =
         writableBufferQueueHandle;
     video_reader_task_config.printableBufferQueueHandle =
@@ -335,7 +336,7 @@ static void MX_SPI3_Init(void) {
     hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
     hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
     hspi3.Init.NSS = SPI_NSS_SOFT;
-    hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+    hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
     hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
     hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
     hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -389,7 +390,10 @@ static void MX_GPIO_Init(void) {
     HAL_GPIO_WritePin(GPIOA, LCD_RST_Pin | LCD_DC_Pin, GPIO_PIN_RESET);
 
     /*Configure GPIO pin Output Level */
-    HAL_GPIO_WritePin(GPIOB, LCD_CS_Pin | SD_CS_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_RESET);
+
+    /*Configure GPIO pin Output Level */
+    HAL_GPIO_WritePin(SD_CS_GPIO_Port, SD_CS_Pin, GPIO_PIN_SET);
 
     /*Configure GPIO pin : PC13 */
     GPIO_InitStruct.Pin = GPIO_PIN_13;
