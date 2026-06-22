@@ -14,6 +14,7 @@ struct video_player_context {
     uint16_t ex;
     uint16_t ey;
     uint32_t current_frame_rate;
+    uint32_t max_frame_rate;
     uint32_t last_tick;
     uint32_t next_frame_tick;
     uint32_t target_frame_rate;

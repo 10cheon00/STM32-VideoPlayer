@@ -30,6 +30,7 @@ video_player_init(video_player_context_t *player_context,
     player_context->ey = VIDEO_CONTEXT_CHUNK_OFFSET;
     player_context->last_tick = HAL_GetTick();
     player_context->current_frame_rate = 0;
+    player_context->max_frame_rate = 0;
     player_context->next_frame_tick = 0;
     player_context->target_frame_rate = target_frame_rate;
     player_context->deadline_missed_count = 0;
@@ -119,6 +120,9 @@ static void video_player_calculate_current_frame_rate(
     player_context->last_tick = tick;
     if (tick_diff > 0) {
         player_context->current_frame_rate = 1000000U / tick_diff;
+    }
+    if (player_context->max_frame_rate < player_context->current_frame_rate) {
+        player_context->max_frame_rate = player_context->current_frame_rate;
     }
 }
 

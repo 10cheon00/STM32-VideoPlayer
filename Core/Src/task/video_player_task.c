@@ -9,7 +9,7 @@ static video_buffer_t *buffer = NULL;
 static osThreadId this = 0;
 
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
-    if (hspi->Instance == SPI1) {
+    if (hspi == st7789_handle.hspi) {
         BaseType_t hpw = pdFALSE;
         st7789_dma_tx_cplt_callback(&st7789_handle);
         vTaskNotifyGiveFromISR(this, &hpw);
@@ -18,7 +18,7 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
 }
 
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
-    if (hspi->Instance == SPI1) {
+    if (hspi == st7789_handle.hspi) {
         Error_Handler();
     }
 }

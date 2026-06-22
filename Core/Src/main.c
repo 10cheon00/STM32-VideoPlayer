@@ -49,18 +49,18 @@
 
 /* Private variables ---------------------------------------------------------*/
 SD_HandleTypeDef hsd;
-DMA_HandleTypeDef hdma_sdio_rx;
+DMA_HandleTypeDef hdma_sdio;
 
-SPI_HandleTypeDef hspi1;
-DMA_HandleTypeDef hdma_spi1_tx;
+SPI_HandleTypeDef hspi3;
+DMA_HandleTypeDef hdma_spi3_tx;
 
 osThreadId VideoPlayerTaskHandle;
 osThreadId VideoReaderTaskHandle;
 osMessageQId writableBufferQueueHandle;
-uint8_t writableBufferQueueBuffer[1 * sizeof(uint32_t)];
+uint8_t writableBufferQueueBuffer[ 2 * sizeof( uint32_t ) ];
 osStaticMessageQDef_t writableBufferQueueControlBlock;
 osMessageQId printableBufferQueueHandle;
-uint8_t printableBufferQueueBuffer[1 * sizeof(uint32_t)];
+uint8_t printableBufferQueueBuffer[ 2 * sizeof( uint32_t ) ];
 osStaticMessageQDef_t printableBufferQueueControlBlock;
 /* USER CODE BEGIN PV */
 
@@ -78,10 +78,10 @@ static const TCHAR *video_file_path = "0:/output.rgb565";
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
-static void MX_SPI1_Init(void);
+static void MX_SPI3_Init(void);
 static void MX_SDIO_SD_Init(void);
-void StartVideoPlayerTask(void const *argument);
-void StartVideoReaderTask(void const *argument);
+void StartVideoPlayerTask(void const * argument);
+void StartVideoReaderTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
 void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName) {
@@ -97,75 +97,68 @@ void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName) {
 /* USER CODE END 0 */
 
 /**
- * @brief  The application entry point.
- * @retval int
- */
-int main(void) {
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
 
-    /* USER CODE BEGIN 1 */
+  /* USER CODE BEGIN 1 */
 
-    /* USER CODE END 1 */
+  /* USER CODE END 1 */
 
-    /* MCU
-     * Configuration--------------------------------------------------------*/
+  /* MCU Configuration--------------------------------------------------------*/
 
-    /* Reset of all peripherals, Initializes the Flash interface and the
-     * Systick. */
-    HAL_Init();
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-    /* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 
-    /* USER CODE END Init */
+  /* USER CODE END Init */
 
-    /* Configure the system clock */
-    SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-    /* USER CODE BEGIN SysInit */
+  /* USER CODE BEGIN SysInit */
 
-    /* USER CODE END SysInit */
+  /* USER CODE END SysInit */
 
-    /* Initialize all configured peripherals */
-    MX_GPIO_Init();
-    MX_DMA_Init();
-    MX_SPI1_Init();
-    MX_SDIO_SD_Init();
-    MX_FATFS_Init();
-    /* USER CODE BEGIN 2 */
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_SPI3_Init();
+  MX_FATFS_Init();
+  MX_SDIO_SD_Init();
+  /* USER CODE BEGIN 2 */
 
-    /* USER CODE END 2 */
+  /* USER CODE END 2 */
 
-    /* USER CODE BEGIN RTOS_MUTEX */
+  /* USER CODE BEGIN RTOS_MUTEX */
     /* add mutexes, ... */
-    /* USER CODE END RTOS_MUTEX */
+  /* USER CODE END RTOS_MUTEX */
 
-    /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
     /* add semaphores, ... */
-    /* USER CODE END RTOS_SEMAPHORES */
+  /* USER CODE END RTOS_SEMAPHORES */
 
-    /* USER CODE BEGIN RTOS_TIMERS */
+  /* USER CODE BEGIN RTOS_TIMERS */
     /* start timers, add new ones, ... */
-    /* USER CODE END RTOS_TIMERS */
+  /* USER CODE END RTOS_TIMERS */
 
-    /* Create the queue(s) */
-    /* definition and creation of writableBufferQueue */
-    osMessageQStaticDef(writableBufferQueue, 1, uint32_t,
-                        writableBufferQueueBuffer,
-                        &writableBufferQueueControlBlock);
-    writableBufferQueueHandle =
-        osMessageCreate(osMessageQ(writableBufferQueue), NULL);
+  /* Create the queue(s) */
+  /* definition and creation of writableBufferQueue */
+  osMessageQStaticDef(writableBufferQueue, 2, uint32_t, writableBufferQueueBuffer, &writableBufferQueueControlBlock);
+  writableBufferQueueHandle = osMessageCreate(osMessageQ(writableBufferQueue), NULL);
 
-    /* definition and creation of printableBufferQueue */
-    osMessageQStaticDef(printableBufferQueue, 1, uint32_t,
-                        printableBufferQueueBuffer,
-                        &printableBufferQueueControlBlock);
-    printableBufferQueueHandle =
-        osMessageCreate(osMessageQ(printableBufferQueue), NULL);
+  /* definition and creation of printableBufferQueue */
+  osMessageQStaticDef(printableBufferQueue, 2, uint32_t, printableBufferQueueBuffer, &printableBufferQueueControlBlock);
+  printableBufferQueueHandle = osMessageCreate(osMessageQ(printableBufferQueue), NULL);
 
-    /* USER CODE BEGIN RTOS_QUEUES */
+  /* USER CODE BEGIN RTOS_QUEUES */
     /* add queues, ... */
     video_player_task_config.player_context = &video_player_context;
     video_player_task_config.shared_context = &video_shared_context;
-    video_player_task_config.hspi = &hspi1;
+    video_player_task_config.hspi = &hspi3;
     video_player_task_config.GPIO_Port_CS = LCD_CS_GPIO_Port;
     video_player_task_config.GPIO_Port_DC = LCD_DC_GPIO_Port;
     video_player_task_config.GPIO_Port_RST = LCD_RST_GPIO_Port;
@@ -196,219 +189,222 @@ int main(void) {
     {
         video_buffer_t *initial_buffer = video_buffer_0;
         xQueueSend(writableBufferQueueHandle, &initial_buffer, 0);
+        initial_buffer = video_buffer_1;
+        xQueueSend(writableBufferQueueHandle, &initial_buffer, 0);
     }
-    /* USER CODE END RTOS_QUEUES */
+  /* USER CODE END RTOS_QUEUES */
 
-    /* Create the thread(s) */
-    /* definition and creation of VideoPlayerTask */
-    osThreadDef(VideoPlayerTask, StartVideoPlayerTask, osPriorityNormal, 0,
-                512);
-    VideoPlayerTaskHandle = osThreadCreate(osThread(VideoPlayerTask),
-                                           (void *)&video_player_task_config);
+  /* Create the thread(s) */
+  /* definition and creation of VideoPlayerTask */
+  osThreadDef(VideoPlayerTask, StartVideoPlayerTask, osPriorityNormal, 0, 512);
+  VideoPlayerTaskHandle = osThreadCreate(osThread(VideoPlayerTask), (void*) &video_player_task_config);
 
-    /* definition and creation of VideoReaderTask */
-    osThreadDef(VideoReaderTask, StartVideoReaderTask, osPriorityAboveNormal, 0,
-                1024);
-    VideoReaderTaskHandle = osThreadCreate(osThread(VideoReaderTask),
-                                           (void *)&video_reader_task_config);
+  /* definition and creation of VideoReaderTask */
+  osThreadDef(VideoReaderTask, StartVideoReaderTask, osPriorityAboveNormal, 0, 1024);
+  VideoReaderTaskHandle = osThreadCreate(osThread(VideoReaderTask), (void*) &video_reader_task_config);
 
-    /* USER CODE BEGIN RTOS_THREADS */
+  /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
     video_player_task_config.VideoPlayerTaskHandle = VideoPlayerTaskHandle;
 
-    /* USER CODE END RTOS_THREADS */
+  /* USER CODE END RTOS_THREADS */
 
-    /* Start scheduler */
-    osKernelStart();
+  /* Start scheduler */
+  osKernelStart();
 
-    /* We should never get here as control is now taken by the scheduler */
+  /* We should never get here as control is now taken by the scheduler */
 
-    /* Infinite loop */
-    /* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
     while (1) {
-        /* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-        /* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
     }
-    /* USER CODE END 3 */
+  /* USER CODE END 3 */
 }
 
 /**
- * @brief System Clock Configuration
- * @retval None
- */
-void SystemClock_Config(void) {
-    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-    /** Configure the main internal regulator output voltage
-     */
-    __HAL_RCC_PWR_CLK_ENABLE();
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+  /** Configure the main internal regulator output voltage
+  */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-    /** Initializes the RCC Oscillators according to the specified parameters
-     * in the RCC_OscInitTypeDef structure.
-     */
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-    RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-    RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-    RCC_OscInitStruct.PLL.PLLM = 8;
-    RCC_OscInitStruct.PLL.PLLN = 100;
-    RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-    RCC_OscInitStruct.PLL.PLLQ = 5;
-    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-        Error_Handler();
-    }
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 100;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 5;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-    /** Initializes the CPU, AHB and APB buses clocks
-     */
-    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
-                                  RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK) {
-        Error_Handler();
-    }
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /**
- * @brief SDIO Initialization Function
- * @param None
- * @retval None
- */
-static void MX_SDIO_SD_Init(void) {
+  * @brief SDIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SDIO_SD_Init(void)
+{
 
-    /* USER CODE BEGIN SDIO_Init 0 */
+  /* USER CODE BEGIN SDIO_Init 0 */
 
-    /* USER CODE END SDIO_Init 0 */
+  /* USER CODE END SDIO_Init 0 */
 
-    /* USER CODE BEGIN SDIO_Init 1 */
+  /* USER CODE BEGIN SDIO_Init 1 */
 
-    /* USER CODE END SDIO_Init 1 */
-    hsd.Instance = SDIO;
-    hsd.Init.ClockEdge = SDIO_CLOCK_EDGE_RISING;
-    hsd.Init.ClockBypass = SDIO_CLOCK_BYPASS_DISABLE;
-    hsd.Init.ClockPowerSave = SDIO_CLOCK_POWER_SAVE_DISABLE;
-    hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
-    hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
-    hsd.Init.ClockDiv = 0;
-    /* USER CODE BEGIN SDIO_Init 2 */
+  /* USER CODE END SDIO_Init 1 */
+  hsd.Instance = SDIO;
+  hsd.Init.ClockEdge = SDIO_CLOCK_EDGE_RISING;
+  hsd.Init.ClockBypass = SDIO_CLOCK_BYPASS_DISABLE;
+  hsd.Init.ClockPowerSave = SDIO_CLOCK_POWER_SAVE_DISABLE;
+  hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
+  hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
+  hsd.Init.ClockDiv = 0;
+  /* USER CODE BEGIN SDIO_Init 2 */
 
-    /* USER CODE END SDIO_Init 2 */
+  /* USER CODE END SDIO_Init 2 */
+
 }
 
 /**
- * @brief SPI1 Initialization Function
- * @param None
- * @retval None
- */
-static void MX_SPI1_Init(void) {
+  * @brief SPI3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI3_Init(void)
+{
 
-    /* USER CODE BEGIN SPI1_Init 0 */
+  /* USER CODE BEGIN SPI3_Init 0 */
 
-    /* USER CODE END SPI1_Init 0 */
+  /* USER CODE END SPI3_Init 0 */
 
-    /* USER CODE BEGIN SPI1_Init 1 */
+  /* USER CODE BEGIN SPI3_Init 1 */
 
-    /* USER CODE END SPI1_Init 1 */
-    /* SPI1 parameter configuration*/
-    hspi1.Instance = SPI1;
-    hspi1.Init.Mode = SPI_MODE_MASTER;
-    hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-    hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-    hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-    hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-    hspi1.Init.NSS = SPI_NSS_SOFT;
-    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
-    hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
-    hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
-    hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-    hspi1.Init.CRCPolynomial = 10;
-    if (HAL_SPI_Init(&hspi1) != HAL_OK) {
-        Error_Handler();
-    }
-    /* USER CODE BEGIN SPI1_Init 2 */
+  /* USER CODE END SPI3_Init 1 */
+  /* SPI3 parameter configuration*/
+  hspi3.Instance = SPI3;
+  hspi3.Init.Mode = SPI_MODE_MASTER;
+  hspi3.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi3.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi3.Init.NSS = SPI_NSS_SOFT;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi3.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI3_Init 2 */
 
-    /* USER CODE END SPI1_Init 2 */
+  /* USER CODE END SPI3_Init 2 */
+
 }
 
 /**
- * Enable DMA controller clock
- */
-static void MX_DMA_Init(void) {
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
 
-    /* DMA controller clock enable */
-    __HAL_RCC_DMA2_CLK_ENABLE();
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+  __HAL_RCC_DMA2_CLK_ENABLE();
 
-    /* DMA interrupt init */
-    /* DMA2_Stream2_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 5, 0);
-    HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
-    /* DMA2_Stream3_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 5, 0);
-    HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
+  /* DMA interrupt init */
+  /* DMA1_Stream5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+  /* DMA2_Stream3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
+
 }
 
 /**
- * @brief GPIO Initialization Function
- * @param None
- * @retval None
- */
-static void MX_GPIO_Init(void) {
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    /* USER CODE BEGIN MX_GPIO_Init_1 */
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
 
-    /* USER CODE END MX_GPIO_Init_1 */
+  /* USER CODE END MX_GPIO_Init_1 */
 
-    /* GPIO Ports Clock Enable */
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
-    /*Configure GPIO pin Output Level */
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
-    /*Configure GPIO pin Output Level */
-    HAL_GPIO_WritePin(GPIOA, LCD_RST_Pin | LCD_DC_Pin, GPIO_PIN_RESET);
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, LCD_BL_Pin|LCD_CS_Pin, GPIO_PIN_SET);
 
-    /*Configure GPIO pin Output Level */
-    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_RESET);
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, LCD_RST_Pin|LCD_DC_Pin, GPIO_PIN_RESET);
 
-    /*Configure GPIO pin : PC13 */
-    GPIO_InitStruct.Pin = GPIO_PIN_13;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-    /*Configure GPIO pins : LCD_RST_Pin LCD_DC_Pin */
-    GPIO_InitStruct.Pin = LCD_RST_Pin | LCD_DC_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  /*Configure GPIO pins : LCD_BL_Pin LCD_RST_Pin LCD_DC_Pin LCD_CS_Pin */
+  GPIO_InitStruct.Pin = LCD_BL_Pin|LCD_RST_Pin|LCD_DC_Pin|LCD_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /*Configure GPIO pin : LCD_CS_Pin */
-    GPIO_InitStruct.Pin = LCD_CS_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(LCD_CS_GPIO_Port, &GPIO_InitStruct);
+  /*Configure GPIO pin : SD_DET_Pin */
+  GPIO_InitStruct.Pin = SD_DET_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(SD_DET_GPIO_Port, &GPIO_InitStruct);
 
-    /*Configure GPIO pin : SDIO_Detect_Pin */
-    GPIO_InitStruct.Pin = SDIO_Detect_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    HAL_GPIO_Init(SDIO_Detect_GPIO_Port, &GPIO_InitStruct);
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
 
-    /* USER CODE BEGIN MX_GPIO_Init_2 */
-
-    /* USER CODE END MX_GPIO_Init_2 */
+  /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
@@ -422,10 +418,11 @@ static void MX_GPIO_Init(void) {
  * @retval None
  */
 /* USER CODE END Header_StartVideoPlayerTask */
-void StartVideoPlayerTask(void const *argument) {
-    /* USER CODE BEGIN 5 */
+void StartVideoPlayerTask(void const * argument)
+{
+  /* USER CODE BEGIN 5 */
     video_player_task_run(argument);
-    /* USER CODE END 5 */
+  /* USER CODE END 5 */
 }
 
 /* USER CODE BEGIN Header_StartVideoReaderTask */
@@ -435,59 +432,64 @@ void StartVideoPlayerTask(void const *argument) {
  * @retval None
  */
 /* USER CODE END Header_StartVideoReaderTask */
-void StartVideoReaderTask(void const *argument) {
-    /* USER CODE BEGIN StartVideoReaderTask */
+void StartVideoReaderTask(void const * argument)
+{
+  /* USER CODE BEGIN StartVideoReaderTask */
     video_reader_task_run(argument);
-    /* USER CODE END StartVideoReaderTask */
+  /* USER CODE END StartVideoReaderTask */
 }
 
 /**
- * @brief  Period elapsed callback in non blocking mode
- * @note   This function is called  when TIM5 interrupt took place, inside
- * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
- * a global variable "uwTick" used as application time base.
- * @param  htim : TIM handle
- * @retval None
- */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-    /* USER CODE BEGIN Callback 0 */
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM5 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
 
-    /* USER CODE END Callback 0 */
-    if (htim->Instance == TIM5) {
-        HAL_IncTick();
-    }
-    /* USER CODE BEGIN Callback 1 */
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM5)
+  {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
 
-    /* USER CODE END Callback 1 */
+  /* USER CODE END Callback 1 */
 }
 
 /**
- * @brief  This function is executed in case of error occurrence.
- * @retval None
- */
-void Error_Handler(void) {
-    /* USER CODE BEGIN Error_Handler_Debug */
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
     /* User can add his own implementation to report the HAL error return
      * state
      */
     __disable_irq();
     while (1) {
     }
-    /* USER CODE END Error_Handler_Debug */
+  /* USER CODE END Error_Handler_Debug */
 }
 #ifdef USE_FULL_ASSERT
 /**
- * @brief  Reports the name of the source file and the source line number
- *         where the assert_param error has occurred.
- * @param  file: pointer to the source file name
- * @param  line: assert_param error line source number
- * @retval None
- */
-void assert_failed(uint8_t *file, uint32_t line) {
-    /* USER CODE BEGIN 6 */
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
     /* User can add his own implementation to report the file name and line
        number, ex: printf("Wrong parameters value: file %s on line %d\r\n",
        file, line) */
-    /* USER CODE END 6 */
+  /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
