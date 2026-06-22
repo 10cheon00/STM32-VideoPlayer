@@ -3,6 +3,7 @@
 
 #include "stm32f4xx.h"
 
+#include "lcd/st7789.h"
 #include "video_context.h"
 
 typedef enum {
